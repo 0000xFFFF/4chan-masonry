@@ -12,7 +12,7 @@
 (function() {
     'use strict';
 
-    let gridRows = 4; // Default number of rows
+    let gridRows = 8;
     let isGridOpen = false;
     let gridOverlay = null;
 
