@@ -154,7 +154,7 @@
     function updateMasonryGrid() {
         const gridContainer = document.getElementById('masonry-grid');
         if (gridContainer) {
-            gridContainer.style.gridTemplateRows = `repeat(${gridRows}, 1fr)`;
+            gridContainer.style.columnCount = gridRows;
         }
     }
 
@@ -170,13 +170,12 @@
             background: rgba(0,0,0,0.95);
             z-index: 10000;
             overflow: auto;
-            padding: 20px;
             box-sizing: border-box;
         `;
 
         const container = document.createElement('div');
         container.style.cssText = `
-            max-width: 1400px;
+            max-width: 97vw;
             margin: 0 auto;
         `;
 
@@ -216,12 +215,11 @@
         const gridContainer = document.createElement('div');
         gridContainer.id = 'masonry-grid';
         gridContainer.style.cssText = `
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            grid-template-rows: repeat(${gridRows}, 1fr);
-            grid-auto-flow: column;
+            display: block;
             gap: 10px;
             margin-top: 20px;
+            column-count: ${gridRows};
+            column-gap: 5px;
         `;
 
         // Create image elements
@@ -241,7 +239,7 @@
             img.style.cssText = `
                 width: 100%;
                 height: 100%;
-                object-fit: cover;
+                object-fit: contain;
                 display: block;
             `;
 
@@ -375,3 +373,4 @@
     init();
 
 })();
+
