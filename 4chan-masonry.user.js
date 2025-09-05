@@ -60,7 +60,8 @@
             if (link && link.href) {
                 const url = link.href.startsWith('//') ? 'https:' + link.href : link.href;
 
-                const isImage = /\.(jpg|jpeg|png|gif|webp|bmp|svg|webm)(\?|$)/i.test(url);
+                // TODO: webm should be thumbnail only, on click change to actual video
+                const isImage = /\.(jpg|jpeg|png|gif|webp|bmp|svg)(\?|$)/i.test(url);
                 if (isImage) {
                     const postId = url.split('/').pop().split('?')[0];
                     let originalName = link.title.trim() || link.textContent.trim() || postId;
