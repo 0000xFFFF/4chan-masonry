@@ -1,5 +1,5 @@
 # 4chan-masonry
-View all images from a 4chan thread in a masonry grid layout.
+View all media (images+videos) from a 4chan thread in a masonry grid layout.
 
 ## Preview
 <img src="preview/preview1.png" width="391" height="129">
