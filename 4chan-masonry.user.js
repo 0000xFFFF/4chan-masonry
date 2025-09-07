@@ -10,6 +10,7 @@
 // @icon         data:image/ico;base64,AAABAAEAEBAAAAEAIADMAAAAFgAAAIlQTkcNChoKAAAADUlIRFIAAAAQAAAAEAgGAAAAH/P/YQAAAJNJREFUeJxjYBhM4D8SJlnN/7QzxnCsFSyKFSOrwWpI9DZdsEI0m+AYJAdSg6EZ2RY0TV9grkM2BEktQjMuW2EY2RBkgxjwaUbzL7ohr+AGIBsCVfQHmwFYXQAEbDgMwRuYUPVsGAEpqMSB0xCMAESPRlyxgSyONRphBuBLSElHDfEmIrgBaM4nRg7VEDSaWDnyAQA+Ad0pEUxcvAAAAABJRU5ErkJggg==
 // ==/UserScript==
 
+
 (function() {
     'use strict';
 
@@ -51,18 +52,22 @@
         return button;
     }
 
-    function findImageLinks() {
-        const imageLinks = [];
-        const fileTexts = document.querySelectorAll('div.fileText');
+    function findMediaLinks() {
+        const mediaLinks = [];
+        const files = document.querySelectorAll('div.file');
 
-        fileTexts.forEach((fileDiv, index) => {
-            const link = fileDiv.querySelector('a');
+        files.forEach((fileDiv, index) => {
+            const fileText = fileDiv.querySelector('.fileText');
+            const fileThumb = fileDiv.querySelector('.fileThumb');
+            const fileThumbImage = fileThumb.querySelector("img");
+            const link = fileText.querySelector('a');
             if (link && link.href) {
                 const url = link.href.startsWith('//') ? 'https:' + link.href : link.href;
 
-                // TODO: webm should be thumbnail only, on click change to actual video
                 const isImage = /\.(jpg|jpeg|png|gif|webp|bmp|svg)(\?|$)/i.test(url);
-                if (isImage) {
+                const isVideo = /\.(mp4|webm|mkv|avi|mov)(\?|$)/i.test(url);
+
+                if (isImage || isVideo) {
                     const postId = url.split('/').pop().split('?')[0];
                     let originalName = link.title.trim() || link.textContent.trim() || postId;
 
@@ -70,31 +75,41 @@
                     const fnfull = link.querySelector('.fnfull');
                     if (fnfull) { originalName = fnfull.textContent.trim(); }
 
-                    imageLinks.push({
+                    const newElement = {
                         url: url,
                         originalName: originalName,
                         postId: postId,
-                        index: index + 1
-                    });
+                        index: index + 1,
+                        isVideo: isVideo,
+                        thumbnail: (fileThumbImage.src)
+                    };
+                    mediaLinks.push(newElement);
+
                 }
             }
         });
 
-        if (imageLinks.length === 0) {
+        if (mediaLinks.length === 0) {
             const imgElements = document.querySelectorAll('img[src*="jpg"], img[src*="jpeg"], img[src*="png"], img[src*="gif"], img[src*="webp"], img[src*="bmp"]');
-            imgElements.forEach((img, index) => {
-                const url = img.src;
+            const videoElements = document.querySelectorAll('img[src*="mp4"], img[src*="webm"], img[src*="mkv"], img[src*="avi"], img[src*="mov"]');
+            const mediaLinks = [...list1, ...list2];
+
+            mediaLinks.forEach((img_or_vid, index) => {
+                const url = img_or_vid.src;
                 const filename = url.split('/').pop().split('?')[0];
+                const isVideo = /\.(mp4|webm|mkv|avi|mov)(\?|$)/i.test(url);
+
                 imageLinks.push({
                     url: url,
                     originalName: filename,
                     postId: filename,
-                    index: index + 1
+                    index: index + 1,
+                    isVideo: isVideo
                 });
             });
         }
 
-        return imageLinks;
+        return mediaLinks;
     }
 
     function createRowSlider() {
@@ -160,7 +175,7 @@
         }
     }
 
-    function createMasonryGrid(imageLinks) {
+    function createMasonryGrid(mediaLinks) {
         const overlay = document.createElement('div');
         overlay.id = 'image-grid-overlay';
         overlay.style.cssText = `
@@ -225,9 +240,9 @@
         `;
 
         // Create image elements
-        imageLinks.forEach((imageData, index) => {
-            const imageWrapper = document.createElement('div');
-            imageWrapper.style.cssText = `
+        mediaLinks.forEach((mediaData, index) => {
+            const mediaWrapper = document.createElement('div');
+            mediaWrapper.style.cssText = `
                 position: relative;
                 overflow: hidden;
                 border-radius: 8px;
@@ -235,19 +250,131 @@
                 transition: transform 0.3s ease, box-shadow 0.3s ease;
             `;
 
-            const img = document.createElement('img');
-            img.src = imageData.url;
-            img.loading = 'lazy';
-            img.style.cssText = `
-                width: 100%;
-                height: 100%;
-                object-fit: contain;
-                display: block;
-            `;
+            if (mediaData.isVideo) {
+                // Thumbnail image
+                const thumbImg = document.createElement('img');
+                thumbImg.src = mediaData.thumbnail;
+                thumbImg.style.cssText = `
+                    width: 100%;
+                    height: auto;
+                    display: block;
+                    object-fit: cover;
+                    cursor: pointer;
+                `;
+                mediaWrapper.appendChild(thumbImg);
+
+                // Play button overlay
+                const playBtn = document.createElement('div');
+                playBtn.style.cssText = `
+                    position: absolute;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    width: 50px;
+                    height: 50px;
+                    background: rgba(0,0,0,0.5);
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 24px;
+                    color: white;
+                    pointer-events: none;
+                `;
+                playBtn.innerHTML = '&#9658;';
+                mediaWrapper.appendChild(playBtn);
+
+                let video = null;
+                let hoverTimeout = null;
+                let videoLoaded = false;
+
+                // Hover in → wait 100ms → load and play muted video
+                mediaWrapper.addEventListener('mouseenter', () => {
+                    hoverTimeout = setTimeout(() => {
+                        if (!video) {
+                            video = document.createElement('video');
+                            video.src = mediaData.url;
+                            video.style.cssText = `
+                                width: 100%;
+                                height: 100%;
+                                object-fit: contain;
+                                display: none;
+                            `;
+                            video.loop = true;
+                            video.muted = true;
+                            video.playsInline = true;
+
+                            video.addEventListener('canplay', () => {
+                                videoLoaded = true;
+                                thumbImg.style.display = 'none';
+                                playBtn.style.display = 'none';
+                                video.style.display = 'block';
+                                video.play().catch(() => { });
+                            });
+
+                            mediaWrapper.appendChild(video);
+                        } else if (videoLoaded) {
+                            thumbImg.style.display = 'none';
+                            playBtn.style.display = 'none';
+                            video.style.display = 'block';
+                            video.play().catch(() => { });
+                        }
+                    }, 100);
+                });
+
+                // Hover out → only reset if not clicked
+                mediaWrapper.addEventListener('mouseleave', () => {
+                    clearTimeout(hoverTimeout);
+                    if (video) {
+                        video.pause();
+                        video.style.display = 'none';
+                        thumbImg.style.display = 'block';
+                        playBtn.style.display = 'flex';
+                    }
+                });
+
+                // Click → unmute, controls on, persistent
+                mediaWrapper.addEventListener('click', (e) => {
+                    if (video && !video.controls) {
+                        e.preventDefault();
+                        video.muted = false;
+                        video.controls = true;
+                        video.autoplay = true;
+                        thumbImg.style.display = 'none';
+                        playBtn.style.display = 'none';
+                        video.style.display = 'block';
+                        video.play().catch(() => { });
+                    }
+                });
+            }
+            else {
+                const img = document.createElement('img');
+                img.src = mediaData.thumbnail;
+                img.loading = 'lazy';
+                img.style.cssText = `
+                    width: 100%;
+                    height: 100%;
+                    object-fit: contain;
+                    display: block;
+                    transition: opacity 0.3s ease;
+                `;
+                mediaWrapper.appendChild(img);
+
+                // Preload full image in background
+                const fullImg = new Image();
+                fullImg.src = mediaData.url;
+                fullImg.onload = () => {
+                    img.style.opacity = '0'; // fade out thumbnail
+                    setTimeout(() => {
+                        img.src = fullImg.src; // replace with full image
+                        img.style.opacity = '1'; // fade in full image
+                    }, 200); // delay so fade-out is visible
+                };
+            }
 
             // Filename tooltip
             const tooltip = document.createElement('div');
-            tooltip.textContent = imageData.originalName;
+            tooltip.textContent = mediaData.originalName;
             tooltip.style.cssText = `
                 position: absolute;
                 bottom: 0;
@@ -263,28 +390,30 @@
             `;
 
             // Hover effects
-            imageWrapper.addEventListener('mouseenter', () => {
-                imageWrapper.style.transform = 'scale(1.05)';
-                imageWrapper.style.boxShadow = '0 8px 25px rgba(0,0,0,0.6)';
-                imageWrapper.style.zIndex = '100';
+            mediaWrapper.addEventListener('mouseenter', () => {
+                mediaWrapper.style.transform = 'scale(1.05)';
+                mediaWrapper.style.boxShadow = '0 8px 25px rgba(0,0,0,0.6)';
+                mediaWrapper.style.zIndex = '100';
                 tooltip.style.transform = 'translateY(0)';
             });
 
-            imageWrapper.addEventListener('mouseleave', () => {
-                imageWrapper.style.transform = 'scale(1)';
-                imageWrapper.style.boxShadow = 'none';
-                imageWrapper.style.zIndex = '1';
+            mediaWrapper.addEventListener('mouseleave', () => {
+                mediaWrapper.style.transform = 'scale(1)';
+                mediaWrapper.style.boxShadow = 'none';
+                mediaWrapper.style.zIndex = '1';
                 tooltip.style.transform = 'translateY(100%)';
             });
 
-            // Click to open full size
-            imageWrapper.addEventListener('click', () => {
-                window.open(imageData.url, '_blank');
+            // Click middle click to open full size
+            mediaWrapper.addEventListener('mousedown', (event) => {
+                if (event.button === 1) {
+                    // 0 = left, 1 = middle, 2 = right
+                    window.open(mediaData.url, '_blank');
+                }
             });
 
-            imageWrapper.appendChild(img);
-            imageWrapper.appendChild(tooltip);
-            gridContainer.appendChild(imageWrapper);
+            mediaWrapper.appendChild(tooltip);
+            gridContainer.appendChild(mediaWrapper);
         });
 
         container.appendChild(sliderContainer);
@@ -298,13 +427,13 @@
     function openGrid() {
         if (isGridOpen) return;
 
-        const imageLinks = findImageLinks();
-        if (imageLinks.length === 0) {
-            alert('No images found on this page!');
+        const mediaLinks = findMediaLinks();
+        if (mediaLinks.length === 0) {
+            alert('No media found on this page!');
             return;
         }
 
-        gridOverlay = createMasonryGrid(imageLinks);
+        gridOverlay = createMasonryGrid(mediaLinks);
         document.body.appendChild(gridOverlay);
         isGridOpen = true;
 
@@ -351,7 +480,7 @@
                 `;
 
                 const viewButton = createViewButton();
-                viewButton.addEventListener('click', function (e) {
+                viewButton.addEventListener('click', function(e) {
                     e.preventDefault();
                     openGrid();
                 });
@@ -361,10 +490,10 @@
                 const threadElement = document.querySelector(".thread");
                 threadElement.parentElement.insertBefore(containerDiv, threadElement);
 
-                const imageLinks = findImageLinks();
-                console.log(`Found ${imageLinks.length} images on page:`, imageLinks);
+                const mediaLinks = findMediaLinks();
+                console.log(`Found ${mediaLinks.length} media files on page:`, mediaLinks);
 
-                document.getElementById("4chan_grid_button").innerHTML = `🖼️ View All Images (${imageLinks.length})`;
+                document.getElementById("4chan_grid_button").innerHTML = `🖼️ Masonry Grid (${mediaLinks.length})`;
 
             } catch (error) {
                 console.error('Error initializing userscript:', error);
@@ -375,4 +504,3 @@
     init();
 
 })();
-
