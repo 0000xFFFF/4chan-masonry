@@ -92,9 +92,9 @@
         if (mediaLinks.length === 0) {
             const imgElements = document.querySelectorAll('img[src*="jpg"], img[src*="jpeg"], img[src*="png"], img[src*="gif"], img[src*="webp"], img[src*="bmp"]');
             const videoElements = document.querySelectorAll('img[src*="mp4"], img[src*="webm"], img[src*="mkv"], img[src*="avi"], img[src*="mov"]');
-            const mediaLinks = [...list1, ...list2];
+            const mediaElements = [...imgElements, ...videoElements];
 
-            mediaLinks.forEach((img_or_vid, index) => {
+            mediaElements.forEach((img_or_vid, index) => {
                 const url = img_or_vid.src;
                 const filename = url.split('/').pop().split('?')[0];
                 const isVideo = /\.(mp4|webm|mkv|avi|mov)(\?|$)/i.test(url);
