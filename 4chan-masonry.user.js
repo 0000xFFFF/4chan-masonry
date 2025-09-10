@@ -14,6 +14,7 @@
 (function() {
     'use strict';
 
+
     let gridRows = 8;
     let isGridOpen = false;
     let gridOverlay = null;
@@ -75,13 +76,25 @@
                     const fnfull = link.querySelector('.fnfull');
                     if (fnfull) { originalName = fnfull.textContent.trim(); }
 
+                    // get file info text
+                    const fileInfo = fileDiv.querySelector(".file-info");
+                    const fileInfoClone = fileInfo.cloneNode(true);
+                    fileInfoClone.querySelectorAll("a").forEach(a => a.remove());
+                    const info = fileInfoClone.textContent.trim();
+                    const size = info.split(", ")[1].replace(")", "");
+                    const width_and_height = size.split("x");
+                    const width = width_and_height[0];
+                    const height = width_and_height[1];
+
                     const newElement = {
                         url: url,
                         originalName: originalName,
                         postId: postId,
                         index: index + 1,
                         isVideo: isVideo,
-                        thumbnail: (fileThumbImage.src)
+                        thumbnail: (fileThumbImage.src),
+                        width: width,
+                        height: height
                     };
                     mediaLinks.push(newElement);
 
@@ -89,26 +102,29 @@
             }
         });
 
-        if (mediaLinks.length === 0) {
-            const imgElements = document.querySelectorAll('img[src*="jpg"], img[src*="jpeg"], img[src*="png"], img[src*="gif"], img[src*="webp"], img[src*="bmp"]');
-            const videoElements = document.querySelectorAll('img[src*="mp4"], img[src*="webm"], img[src*="mkv"], img[src*="avi"], img[src*="mov"]');
-            const mediaElements = [...imgElements, ...videoElements];
 
-            mediaElements.forEach((img_or_vid, index) => {
-                const url = img_or_vid.src;
-                const filename = url.split('/').pop().split('?')[0];
-                const isVideo = /\.(mp4|webm|mkv|avi|mov)(\?|$)/i.test(url);
 
-                imageLinks.push({
-                    url: url,
-                    originalName: filename,
-                    postId: filename,
-                    index: index + 1,
-                    isVideo: isVideo
-                });
+        return mediaLinks;
+    }
+
+    function findMediaLinksFromImgAndVideoElements() {
+        const mediaLinks = []
+        const imgElements = document.querySelectorAll('img[src*="jpg"], img[src*="jpeg"], img[src*="png"], img[src*="gif"], img[src*="webp"], img[src*="bmp"]');
+        const videoElements = document.querySelectorAll('video[src*="mp4"], video[src*="webm"], video[src*="mkv"], video[src*="avi"], video[src*="mov"]');
+        const mediaElements = [...imgElements, ...videoElements];
+        mediaElements.forEach((img_or_vid, index) => {
+            const url = img_or_vid.src;
+            const filename = url.split('/').pop().split('?')[0];
+            const isVideo = /\.(mp4|webm|mkv|avi|mov)(\?|$)/i.test(url);
+
+            mediaLinks.push({
+                url: url,
+                originalName: filename,
+                postId: filename,
+                index: index + 1,
+                isVideo: isVideo
             });
-        }
-
+        });
         return mediaLinks;
     }
 
@@ -256,7 +272,7 @@
                 thumbImg.src = mediaData.thumbnail;
                 thumbImg.style.cssText = `
                     width: 100%;
-                    height: auto;
+                    height: $(mediaData.height);
                     display: block;
                     object-fit: cover;
                     cursor: pointer;
@@ -296,7 +312,7 @@
                             video.src = mediaData.url;
                             video.style.cssText = `
                                 width: 100%;
-                                height: 100%;
+                                height: $(mediaData.height);
                                 object-fit: contain;
                                 display: none;
                             `;
@@ -309,7 +325,7 @@
                                 thumbImg.style.display = 'none';
                                 playBtn.style.display = 'none';
                                 video.style.display = 'block';
-                                video.play().catch(() => { });
+                                video.play().catch(() => {});
                             });
 
                             mediaWrapper.appendChild(video);
@@ -317,7 +333,7 @@
                             thumbImg.style.display = 'none';
                             playBtn.style.display = 'none';
                             video.style.display = 'block';
-                            video.play().catch(() => { });
+                            video.play().catch(() => {});
                         }
                     }, 100);
                 });
@@ -343,7 +359,7 @@
                         thumbImg.style.display = 'none';
                         playBtn.style.display = 'none';
                         video.style.display = 'block';
-                        video.play().catch(() => { });
+                        video.play().catch(() => {});
                     }
                 });
             }
@@ -353,7 +369,7 @@
                 img.loading = 'lazy';
                 img.style.cssText = `
                     width: 100%;
-                    height: 100%;
+                    height: $(mediaData.height);
                     object-fit: contain;
                     display: block;
                     transition: opacity 0.3s ease;
@@ -480,7 +496,7 @@
                 `;
 
                 const viewButton = createViewButton();
-                viewButton.addEventListener('click', function(e) {
+                viewButton.addEventListener('click', function (e) {
                     e.preventDefault();
                     openGrid();
                 });
