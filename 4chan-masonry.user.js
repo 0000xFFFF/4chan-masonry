@@ -10,50 +10,108 @@
 // @icon         data:image/ico;base64,AAABAAEAEBAAAAEAIADMAAAAFgAAAIlQTkcNChoKAAAADUlIRFIAAAAQAAAAEAgGAAAAH/P/YQAAAJNJREFUeJxjYBhM4D8SJlnN/7QzxnCsFSyKFSOrwWpI9DZdsEI0m+AYJAdSg6EZ2RY0TV9grkM2BEktQjMuW2EY2RBkgxjwaUbzL7ohr+AGIBsCVfQHmwFYXQAEbDgMwRuYUPVsGAEpqMSB0xCMAESPRlyxgSyONRphBuBLSElHDfEmIrgBaM4nRg7VEDSaWDnyAQA+Ad0pEUxcvAAAAABJRU5ErkJggg==
 // ==/UserScript==
 
-
 (function() {
     'use strict';
 
+    const userscript_icon = "data:image/ico;base64,AAABAAEAEBAAAAEAIADMAAAAFgAAAIlQTkcNChoKAAAADUlIRFIAAAAQAAAAEAgGAAAAH/P/YQAAAJNJREFUeJxjYBhM4D8SJlnN/7QzxnCsFSyKFSOrwWpI9DZdsEI0m+AYJAdSg6EZ2RY0TV9grkM2BEktQjMuW2EY2RBkgxjwaUbzL7ohr+AGIBsCVfQHmwFYXQAEbDgMwRuYUPVsGAEpqMSB0xCMAESPRlyxgSyONRphBuBLSElHDfEmIrgBaM4nRg7VEDSaWDnyAQA+Ad0pEUxcvAAAAABJRU5ErkJggg==";
 
     let gridRows = 8;
     let isGridOpen = false;
     let gridOverlay = null;
 
-    function createViewButton() {
-        const button = document.createElement('button');
-        button.id = "4chan_grid_button";
-        button.innerHTML = '🖼️ View All Images';
-        button.style.cssText = `
-            padding: 12px 18px;
-            background: #2d5016;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: bold;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-            transition: all 0.3s ease;
-            white-space: nowrap;
-        `;
+    function initUI() {
+        const button = document.createElement('span');
+        button.title = "Masonry Grid";
 
-        // Hover effect
-        button.addEventListener('mouseenter', () => {
-            button.style.background = '#4a7c21';
-            button.style.transform = 'translateY(-2px)';
-            button.style.boxShadow = '0 6px 20px rgba(0,0,0,0.4)';
+        button.addEventListener('click', function (e) {
+            e.preventDefault();
+            openGrid();
         });
 
-        button.addEventListener('mouseleave', () => {
-            button.style.background = '#2d5016';
-            button.style.transform = 'translateY(0)';
-            button.style.boxShadow = '0 4px 15px rgba(0,0,0,0.3)';
-        });
+        const forchanX_header = document.getElementById("header-bar")
+        if (forchanX_header) { // if 4chan X is detected
 
-        return button;
+            const element = document.getElementById("shortcut-watcher");
+            button.id = "shortcut-masonry";
+            button.style.cssText = `
+                margin: 0 0 0 5px;
+                padding 0;
+                cursor: pointer;
+                display: flex;
+                justify-content: center;
+            `;
+            button.className = "shortcut brackets-wrap";
+
+            const img = document.createElement("img");
+            img.style.cssText = `
+                height: 15px;
+            `
+            img.src = userscript_icon;
+            button.appendChild(img);
+
+            forchanX_header.appendChild(button);
+
+
+            element.parentElement.insertBefore(button, element);
+        }
+        else {
+            button.style.cssText = `
+                padding: 12px 18px;
+                display: flex;
+                gap: 5px;
+                background: #2d5016;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                cursor: pointer;
+                font-size: 14px;
+                font-weight: bold;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+                transition: all 0.3s ease;
+                white-space: nowrap;
+            `;
+
+            const img = document.createElement("img");
+            img.style.cssText = `
+                height: 15px;
+            `
+            img.src = userscript_icon;
+            button.appendChild(img);
+
+            const span = document.createElement("span");
+            span.innerHTML = "Masonry Grid";
+            button.appendChild(span);
+
+            // Hover effect
+            button.addEventListener('mouseenter', () => {
+                button.style.background = '#4a7c21';
+                button.style.transform = 'translateY(-2px)';
+                button.style.boxShadow = '0 6px 20px rgba(0,0,0,0.4)';
+            });
+
+            button.addEventListener('mouseleave', () => {
+                button.style.background = '#2d5016';
+                button.style.transform = 'translateY(0)';
+                button.style.boxShadow = '0 4px 15px rgba(0,0,0,0.3)';
+            });
+
+            const containerDiv = document.createElement('div');
+            containerDiv.id = "4chan_grid_cont";
+            containerDiv.style.cssText = `
+                display: flex;
+                margin: 15px 0 15px 0;
+            `;
+
+            containerDiv.appendChild(button);
+            const threadElement = document.querySelector(".thread");
+            threadElement.parentElement.insertBefore(containerDiv, threadElement);
+        }
+
+
+        findMediaLinks(button);
     }
 
-    function findMediaLinks() {
+    function findMediaLinks(button = null) {
         const mediaLinks = [];
         const files = document.querySelectorAll('div.file');
 
@@ -78,13 +136,18 @@
 
                     // get file info text
                     const fileInfo = fileDiv.querySelector(".file-info");
-                    const fileInfoClone = fileInfo.cloneNode(true);
-                    fileInfoClone.querySelectorAll("a").forEach(a => a.remove());
-                    const info = fileInfoClone.textContent.trim();
-                    const size = info.split(", ")[1].replace(")", "");
-                    const width_and_height = size.split("x");
-                    const width = width_and_height[0];
-                    const height = width_and_height[1];
+                    let width = null;
+                    let height = null;
+                    if (fileInfo) {
+                        const fileInfoClone = fileInfo.cloneNode(true);
+                        fileInfoClone.querySelectorAll("a").forEach(a => a.remove());
+                        const info = fileInfoClone.textContent.trim();
+                        const size = info.split(", ")[1].replace(")", "");
+                        const width_and_height = size.split("x");
+                        width = width_and_height[0];
+                        height = width_and_height[1];
+                    }
+
 
                     const newElement = {
                         url: url,
@@ -102,6 +165,10 @@
             }
         });
 
+
+        if (button) {
+            button.title = `Masonry Grid (${mediaLinks.length})`;
+        }
 
 
         return mediaLinks;
@@ -488,28 +555,7 @@
 
         setTimeout(async () => {
             try {
-                const containerDiv = document.createElement('div');
-                containerDiv.id = "4chan_grid_cont";
-                containerDiv.style.cssText = `
-                    display: flex;
-                    margin: 15px 0 15px 0;
-                `;
-
-                const viewButton = createViewButton();
-                viewButton.addEventListener('click', function (e) {
-                    e.preventDefault();
-                    openGrid();
-                });
-
-                containerDiv.appendChild(viewButton);
-
-                const threadElement = document.querySelector(".thread");
-                threadElement.parentElement.insertBefore(containerDiv, threadElement);
-
-                const mediaLinks = findMediaLinks();
-                console.log(`Found ${mediaLinks.length} media files on page:`, mediaLinks);
-
-                document.getElementById("4chan_grid_button").innerHTML = `🖼️ Masonry Grid (${mediaLinks.length})`;
+                initUI();
 
             } catch (error) {
                 console.error('Error initializing userscript:', error);
