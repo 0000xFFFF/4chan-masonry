@@ -2,11 +2,11 @@
 View all media (images+videos) from a 4chan thread in a masonry grid layout.
 
 ## Preview
-By default button is added on top of the thread.
+By default, button is added on top of the thread.
 
 <img src="preview/preview1.png" width="610" height="330">
 
-If you have [4chan-x](https://github.com/ccd0/4chan-x) button gets added in the shortcuts bar.
+If you have [4chan-x](https://github.com/ccd0/4chan-x), button gets added in the shortcuts bar.
 
 <img src="preview/preview3.png" width="294" height="55">
 
