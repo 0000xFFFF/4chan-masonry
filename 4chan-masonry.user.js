@@ -15,7 +15,9 @@
 
     const userscript_icon = "data:image/ico;base64,AAABAAEAEBAAAAEAIADMAAAAFgAAAIlQTkcNChoKAAAADUlIRFIAAAAQAAAAEAgGAAAAH/P/YQAAAJNJREFUeJxjYBhM4D8SJlnN/7QzxnCsFSyKFSOrwWpI9DZdsEI0m+AYJAdSg6EZ2RY0TV9grkM2BEktQjMuW2EY2RBkgxjwaUbzL7ohr+AGIBsCVfQHmwFYXQAEbDgMwRuYUPVsGAEpqMSB0xCMAESPRlyxgSyONRphBuBLSElHDfEmIrgBaM4nRg7VEDSaWDnyAQA+Ad0pEUxcvAAAAABJRU5ErkJggg==";
 
-    let gridRows = 8;
+    const gridRowsMin = 1;
+    const gridRowsMax = 15;
+    let gridRows = 12;
     let isGridOpen = false;
     let gridOverlay = null;
 
@@ -121,6 +123,7 @@
             const fileThumbImage = fileThumb.querySelector("img");
             let link = null;
             if (fileText) { link = fileText.querySelector('a'); }
+
             if (link && link.href) {
                 const url = link.href.startsWith('//') ? 'https:' + link.href : link.href;
 
@@ -218,8 +221,8 @@
 
         const slider = document.createElement('input');
         slider.type = 'range';
-        slider.min = '2';
-        slider.max = '8';
+        slider.min = gridRowsMin;
+        slider.max = gridRowsMax;
         slider.value = gridRows;
         slider.style.cssText = `
             width: 200px;
@@ -309,6 +312,16 @@
 
         closeButton.addEventListener('click', closeGrid);
 
+        const handleParentClick = (event) => {
+            event.preventDefault();
+            if (event.target === event.currentTarget) {
+              closeGrid();
+            }
+        };
+
+        overlay.addEventListener('click', handleParentClick);
+        container.addEventListener('click', handleParentClick);
+
         // Row slider
         const sliderContainer = createRowSlider();
 
@@ -364,6 +377,7 @@
                     font-size: 24px;
                     color: white;
                     pointer-events: none;
+                    opacity: 0.4;
                 `;
                 playBtn.innerHTML = '&#9658;';
                 mediaWrapper.appendChild(playBtn);
