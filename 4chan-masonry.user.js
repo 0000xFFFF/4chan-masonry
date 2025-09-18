@@ -421,15 +421,15 @@
                 });
 
                 // Hover out → only reset if not clicked
-                mediaWrapper.addEventListener('mouseleave', () => {
-                    clearTimeout(hoverTimeout);
-                    if (video) {
-                        video.pause();
-                        video.style.display = 'none';
-                        thumbImg.style.display = 'block';
-                        playBtn.style.display = 'flex';
-                    }
-                });
+                // mediaWrapper.addEventListener('mouseleave', () => {
+                //     clearTimeout(hoverTimeout);
+                //     if (video) {
+                //         video.pause();
+                //         video.style.display = 'none';
+                //         thumbImg.style.display = 'block';
+                //         playBtn.style.display = 'flex';
+                //     }
+                // });
 
                 // Click → unmute, controls on, persistent
                 mediaWrapper.addEventListener('click', (e) => {
