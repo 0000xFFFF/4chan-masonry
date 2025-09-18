@@ -119,7 +119,8 @@
             const fileText = fileDiv.querySelector('.fileText');
             const fileThumb = fileDiv.querySelector('.fileThumb');
             const fileThumbImage = fileThumb.querySelector("img");
-            const link = fileText.querySelector('a');
+            let link = null;
+            if (fileText) { link = fileText.querySelector('a'); }
             if (link && link.href) {
                 const url = link.href.startsWith('//') ? 'https:' + link.href : link.href;
 
