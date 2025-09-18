@@ -6,578 +6,608 @@
 // @author       0000xFFFF
 // @match        *://boards.4chan.org/*/thread/*
 // @match        *://boards.4channel.org/*/thread/*
-// @grant        none
+// @grant        GM_addStyle
 // @icon         data:image/ico;base64,AAABAAEAEBAAAAEAIADMAAAAFgAAAIlQTkcNChoKAAAADUlIRFIAAAAQAAAAEAgGAAAAH/P/YQAAAJNJREFUeJxjYBhM4D8SJlnN/7QzxnCsFSyKFSOrwWpI9DZdsEI0m+AYJAdSg6EZ2RY0TV9grkM2BEktQjMuW2EY2RBkgxjwaUbzL7ohr+AGIBsCVfQHmwFYXQAEbDgMwRuYUPVsGAEpqMSB0xCMAESPRlyxgSyONRphBuBLSElHDfEmIrgBaM4nRg7VEDSaWDnyAQA+Ad0pEUxcvAAAAABJRU5ErkJggg==
 // ==/UserScript==
 
-(function() {
-    'use strict';
+function GM_addStyle(css) {
+    const style = document.createElement("style");
+    style.textContent = css;
+    (document.head || document.documentElement).appendChild(style);
+    return style;
+}
 
-    const userscript_icon = "data:image/ico;base64,AAABAAEAEBAAAAEAIADMAAAAFgAAAIlQTkcNChoKAAAADUlIRFIAAAAQAAAAEAgGAAAAH/P/YQAAAJNJREFUeJxjYBhM4D8SJlnN/7QzxnCsFSyKFSOrwWpI9DZdsEI0m+AYJAdSg6EZ2RY0TV9grkM2BEktQjMuW2EY2RBkgxjwaUbzL7ohr+AGIBsCVfQHmwFYXQAEbDgMwRuYUPVsGAEpqMSB0xCMAESPRlyxgSyONRphBuBLSElHDfEmIrgBaM4nRg7VEDSaWDnyAQA+Ad0pEUxcvAAAAABJRU5ErkJggg==";
+// Usage
 
-    const gridRowsMin = 1;
-    const gridRowsMax = 15;
-    let gridRows = 12;
-    let isGridOpen = false;
-    let gridOverlay = null;
+var MasonryCss = `
 
-    function initUI() {
-        const button = document.createElement('span');
-        button.title = "Masonry Grid";
+#fcm_overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0,0,0,0.95);
+    z-index: 10000;
+    overflow: auto;
+    box-sizing: border-box;
+}
 
-        button.addEventListener('click', function (e) {
-            e.preventDefault();
-            openGrid();
-        });
+#fcm_topbar {
+    position: fixed;
+    display: flex;
+    padding: 0 10px;
+    width: 100vw;
+    margin: 0;
+    background-color: rgba(0, 0, 0, 0.4);
+    color: #fff;
+    z-index: 999;
+    transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
+    will-change: transform, opacity;
+}
 
-        const forchanX_header = document.getElementById("header-bar")
-        if (forchanX_header) { // if 4chan X is detected
+.fcm_close {
+    padding: 3px;
+    background: #d32f2f;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 10px;
+    font-weight: bold;
+    z-index: 10001;
+    transition: background 0.3s ease;
+}
 
-            const element = document.getElementById("shortcut-watcher");
-            button.id = "shortcut-masonry";
-            button.style.cssText = `
-                margin: 0 0 0 5px;
-                padding 0;
-                cursor: pointer;
-                display: flex;
-                justify-content: center;
-            `;
-            button.className = "shortcut brackets-wrap";
-
-            const img = document.createElement("img");
-            img.style.cssText = `
-                height: 15px;
-            `
-            img.src = userscript_icon;
-            button.appendChild(img);
-
-            forchanX_header.appendChild(button);
-
-
-            element.parentElement.insertBefore(button, element);
-        }
-        else {
-            button.style.cssText = `
-                padding: 12px 18px;
-                display: flex;
-                gap: 5px;
-                background: #2d5016;
-                color: white;
-                border: none;
-                border-radius: 8px;
-                cursor: pointer;
-                font-size: 14px;
-                font-weight: bold;
-                box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-                transition: all 0.3s ease;
-                white-space: nowrap;
-            `;
-
-            const img = document.createElement("img");
-            img.style.cssText = `
-                height: 15px;
-            `
-            img.src = userscript_icon;
-            button.appendChild(img);
-
-            const span = document.createElement("span");
-            span.innerHTML = "Masonry Grid";
-            button.appendChild(span);
-
-            // Hover effect
-            button.addEventListener('mouseenter', () => {
-                button.style.background = '#4a7c21';
-                button.style.transform = 'translateY(-2px)';
-                button.style.boxShadow = '0 6px 20px rgba(0,0,0,0.4)';
-            });
-
-            button.addEventListener('mouseleave', () => {
-                button.style.background = '#2d5016';
-                button.style.transform = 'translateY(0)';
-                button.style.boxShadow = '0 4px 15px rgba(0,0,0,0.3)';
-            });
-
-            const containerDiv = document.createElement('div');
-            containerDiv.id = "4chan_grid_cont";
-            containerDiv.style.cssText = `
-                display: flex;
-                margin: 15px 0 15px 0;
-            `;
-
-            containerDiv.appendChild(button);
-            const threadElement = document.querySelector(".thread");
-            threadElement.parentElement.insertBefore(containerDiv, threadElement);
-        }
+#fcm_masonry {
+    display: block;
+    gap: 10px;
+    margin-top: 50px;
+    column-gap: 5px;
+}
 
 
-        findMediaLinks(button);
-    }
+`;
 
-    function findMediaLinks(button = null) {
-        const mediaLinks = [];
-        const files = document.querySelectorAll('div.file');
-
-        files.forEach((fileDiv, index) => {
-            const fileText = fileDiv.querySelector('.fileText');
-            const fileThumb = fileDiv.querySelector('.fileThumb');
-            const fileThumbImage = fileThumb.querySelector("img");
-            let link = null;
-            if (fileText) { link = fileText.querySelector('a'); }
-
-            if (link && link.href) {
-                const url = link.href.startsWith('//') ? 'https:' + link.href : link.href;
-
-                const isImage = /\.(jpg|jpeg|png|gif|webp|bmp|svg)(\?|$)/i.test(url);
-                const isVideo = /\.(mp4|webm|mkv|avi|mov)(\?|$)/i.test(url);
-
-                if (isImage || isVideo) {
-                    const postId = url.split('/').pop().split('?')[0];
-                    let originalName = link.title.trim() || link.textContent.trim() || postId;
-
-                    // if 4chan-X is used fix the name fetching
-                    const fnfull = link.querySelector('.fnfull');
-                    if (fnfull) { originalName = fnfull.textContent.trim(); }
-
-                    // get file info text
-                    const fileInfo = fileDiv.querySelector(".file-info");
-                    let width = null;
-                    let height = null;
-                    if (fileInfo) {
-                        const fileInfoClone = fileInfo.cloneNode(true);
-                        fileInfoClone.querySelectorAll("a").forEach(a => a.remove());
-                        const info = fileInfoClone.textContent.trim();
-                        const size = info.split(", ")[1].replace(")", "");
-                        const width_and_height = size.split("x");
-                        width = width_and_height[0];
-                        height = width_and_height[1];
-                    }
+GM_addStyle(MasonryCss);
 
 
-                    const newElement = {
-                        url: url,
-                        originalName: originalName,
-                        postId: postId,
-                        index: index + 1,
-                        isVideo: isVideo,
-                        thumbnail: (fileThumbImage.src),
-                        width: width,
-                        height: height
-                    };
-                    mediaLinks.push(newElement);
+const userscript_icon = "data:image/ico;base64,AAABAAEAEBAAAAEAIADMAAAAFgAAAIlQTkcNChoKAAAADUlIRFIAAAAQAAAAEAgGAAAAH/P/YQAAAJNJREFUeJxjYBhM4D8SJlnN/7QzxnCsFSyKFSOrwWpI9DZdsEI0m+AYJAdSg6EZ2RY0TV9grkM2BEktQjMuW2EY2RBkgxjwaUbzL7ohr+AGIBsCVfQHmwFYXQAEbDgMwRuYUPVsGAEpqMSB0xCMAESPRlyxgSyONRphBuBLSElHDfEmIrgBaM4nRg7VEDSaWDnyAQA+Ad0pEUxcvAAAAABJRU5ErkJggg==";
 
-                }
-            }
-        });
+const gridRowsMin = 1;
+const gridRowsMax = 15;
+let gridRows = 12;
+let isGridOpen = false;
+let gridOverlay = null;
 
+function initUI() {
+    const button = document.createElement('span');
+    button.title = "Masonry Grid";
 
-        if (button) {
-            button.title = `Masonry Grid (${mediaLinks.length})`;
-        }
+    button.addEventListener('click', function (e) {
+        e.preventDefault();
+        openGrid();
+    });
 
+    const forchanX_header = document.getElementById("header-bar")
+    if (forchanX_header) { // if 4chan X is detected
 
-        return mediaLinks;
-    }
-
-    function findMediaLinksFromImgAndVideoElements() {
-        const mediaLinks = []
-        const imgElements = document.querySelectorAll('img[src*="jpg"], img[src*="jpeg"], img[src*="png"], img[src*="gif"], img[src*="webp"], img[src*="bmp"]');
-        const videoElements = document.querySelectorAll('video[src*="mp4"], video[src*="webm"], video[src*="mkv"], video[src*="avi"], video[src*="mov"]');
-        const mediaElements = [...imgElements, ...videoElements];
-        mediaElements.forEach((img_or_vid, index) => {
-            const url = img_or_vid.src;
-            const filename = url.split('/').pop().split('?')[0];
-            const isVideo = /\.(mp4|webm|mkv|avi|mov)(\?|$)/i.test(url);
-
-            mediaLinks.push({
-                url: url,
-                originalName: filename,
-                postId: filename,
-                index: index + 1,
-                isVideo: isVideo
-            });
-        });
-        return mediaLinks;
-    }
-
-    function createRowSlider() {
-        const sliderContainer = document.createElement('div');
-        sliderContainer.style.cssText = `
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            margin-bottom: 20px;
-            padding: 15px;
-            background: rgba(0,0,0,0.8);
-            border-radius: 10px;
-        `;
-
-        const label = document.createElement('label');
-        label.textContent = 'Grid Rows:';
-        label.style.cssText = `
-            color: white;
-            font-weight: bold;
-            font-size: 16px;
-        `;
-
-        const slider = document.createElement('input');
-        slider.type = 'range';
-        slider.min = gridRowsMin;
-        slider.max = gridRowsMax;
-        slider.value = gridRows;
-        slider.style.cssText = `
-            width: 200px;
-            height: 6px;
-            background: #333;
-            outline: none;
-            border-radius: 3px;
+        const element = document.getElementById("shortcut-watcher");
+        button.id = "shortcut-masonry";
+        button.style.cssText = `
+            margin: 0 0 0 5px;
+            padding 0;
             cursor: pointer;
+            display: flex;
+            justify-content: center;
         `;
+        button.className = "shortcut brackets-wrap";
 
-        const valueDisplay = document.createElement('span');
-        valueDisplay.textContent = gridRows;
-        valueDisplay.style.cssText = `
-            color: white;
-            font-weight: bold;
-            font-size: 16px;
-            min-width: 20px;
-        `;
+        const img = document.createElement("img");
+        img.style.cssText = `
+            height: 15px;
+        `
+        img.src = userscript_icon;
+        button.appendChild(img);
 
-        slider.addEventListener('input', (e) => {
-            gridRows = parseInt(e.target.value);
-            valueDisplay.textContent = gridRows;
-            updateMasonryGrid();
-        });
+        forchanX_header.appendChild(button);
 
-        sliderContainer.appendChild(label);
-        sliderContainer.appendChild(slider);
-        sliderContainer.appendChild(valueDisplay);
 
-        return sliderContainer;
+        element.parentElement.insertBefore(button, element);
     }
-
-    function updateMasonryGrid() {
-        const gridContainer = document.getElementById('masonry-grid');
-        if (gridContainer) {
-            gridContainer.style.columnCount = gridRows;
-        }
-    }
-
-    function createMasonryGrid(mediaLinks) {
-        const overlay = document.createElement('div');
-        overlay.id = 'image-grid-overlay';
-        overlay.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: rgba(0,0,0,0.95);
-            z-index: 10000;
-            overflow: auto;
-            box-sizing: border-box;
-        `;
-
-        const container = document.createElement('div');
-        container.style.cssText = `
-            max-width: 97vw;
-            margin: 0 auto;
-        `;
-
-        // Close button
-        const closeButton = document.createElement('button');
-        closeButton.innerHTML = '✕ Close';
-        closeButton.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 10px 20px;
-            background: #d32f2f;
+    else {
+        button.style.cssText = `
+            padding: 12px 18px;
+            display: flex;
+            gap: 5px;
+            background: #2d5016;
             color: white;
             border: none;
-            border-radius: 5px;
+            border-radius: 8px;
             cursor: pointer;
-            font-size: 16px;
+            font-size: 14px;
             font-weight: bold;
-            z-index: 10001;
-            transition: background 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            transition: all 0.3s ease;
+            white-space: nowrap;
         `;
 
-        closeButton.addEventListener('mouseenter', () => {
-            closeButton.style.background = '#b71c1c';
+        const img = document.createElement("img");
+        img.style.cssText = `
+            height: 15px;
+        `
+        img.src = userscript_icon;
+        button.appendChild(img);
+
+        const span = document.createElement("span");
+        span.innerHTML = "Masonry Grid";
+        button.appendChild(span);
+
+        // Hover effect
+        button.addEventListener('mouseenter', () => {
+            button.style.background = '#4a7c21';
+            button.style.transform = 'translateY(-2px)';
+            button.style.boxShadow = '0 6px 20px rgba(0,0,0,0.4)';
         });
 
-        closeButton.addEventListener('mouseleave', () => {
-            closeButton.style.background = '#d32f2f';
+        button.addEventListener('mouseleave', () => {
+            button.style.background = '#2d5016';
+            button.style.transform = 'translateY(0)';
+            button.style.boxShadow = '0 4px 15px rgba(0,0,0,0.3)';
         });
 
-        closeButton.addEventListener('click', closeGrid);
+        const containerDiv = document.createElement('div');
+        containerDiv.id = "4chan_grid_cont";
+        containerDiv.style.cssText = `
+            display: flex;
+            margin: 15px 0 15px 0;
+        `;
 
-        const handleParentClick = (event) => {
-            event.preventDefault();
-            if (event.target === event.currentTarget) {
-              closeGrid();
+        containerDiv.appendChild(button);
+        const threadElement = document.querySelector(".thread");
+        threadElement.parentElement.insertBefore(containerDiv, threadElement);
+    }
+
+
+    findMediaLinks(button);
+}
+
+function findMediaLinks(button = null) {
+    const mediaLinks = [];
+    const files = document.querySelectorAll('div.file');
+
+    files.forEach((fileDiv, index) => {
+        const fileText = fileDiv.querySelector('.fileText');
+        const fileThumb = fileDiv.querySelector('.fileThumb');
+        const fileThumbImage = fileThumb.querySelector("img");
+        let link = null;
+        if (fileText) { link = fileText.querySelector('a'); }
+
+        if (link && link.href) {
+            const url = link.href.startsWith('//') ? 'https:' + link.href : link.href;
+
+            const isImage = /\.(jpg|jpeg|png|gif|webp|bmp|svg)(\?|$)/i.test(url);
+            const isVideo = /\.(mp4|webm|mkv|avi|mov)(\?|$)/i.test(url);
+
+            if (isImage || isVideo) {
+                const postId = url.split('/').pop().split('?')[0];
+                let originalName = link.title.trim() || link.textContent.trim() || postId;
+
+                // if 4chan-X is used fix the name fetching
+                const fnfull = link.querySelector('.fnfull');
+                if (fnfull) { originalName = fnfull.textContent.trim(); }
+
+                // get file info text
+                const fileInfo = fileDiv.querySelector(".file-info");
+                let width = null;
+                let height = null;
+                if (fileInfo) {
+                    const fileInfoClone = fileInfo.cloneNode(true);
+                    fileInfoClone.querySelectorAll("a").forEach(a => a.remove());
+                    const info = fileInfoClone.textContent.trim();
+                    const size = info.split(", ")[1].replace(")", "");
+                    const width_and_height = size.split("x");
+                    width = width_and_height[0];
+                    height = width_and_height[1];
+                }
+
+
+                const newElement = {
+                    url: url,
+                    originalName: originalName,
+                    postId: postId,
+                    index: index + 1,
+                    isVideo: isVideo,
+                    thumbnail: (fileThumbImage.src),
+                    width: width,
+                    height: height
+                };
+                mediaLinks.push(newElement);
+
             }
-        };
+        }
+    });
 
-        overlay.addEventListener('click', handleParentClick);
-        container.addEventListener('click', handleParentClick);
 
-        // Row slider
-        const sliderContainer = createRowSlider();
+    if (button) {
+        button.title = `Masonry Grid (${mediaLinks.length})`;
+    }
 
-        // Grid container
-        const gridContainer = document.createElement('div');
-        gridContainer.id = 'masonry-grid';
-        gridContainer.style.cssText = `
-            display: block;
-            gap: 10px;
-            margin-top: 20px;
-            column-count: ${gridRows};
-            column-gap: 5px;
+
+    return mediaLinks;
+}
+
+function findMediaLinksFromImgAndVideoElements() {
+    const mediaLinks = []
+    const imgElements = document.querySelectorAll('img[src*="jpg"], img[src*="jpeg"], img[src*="png"], img[src*="gif"], img[src*="webp"], img[src*="bmp"]');
+    const videoElements = document.querySelectorAll('video[src*="mp4"], video[src*="webm"], video[src*="mkv"], video[src*="avi"], video[src*="mov"]');
+    const mediaElements = [...imgElements, ...videoElements];
+    mediaElements.forEach((img_or_vid, index) => {
+        const url = img_or_vid.src;
+        const filename = url.split('/').pop().split('?')[0];
+        const isVideo = /\.(mp4|webm|mkv|avi|mov)(\?|$)/i.test(url);
+
+        mediaLinks.push({
+            url: url,
+            originalName: filename,
+            postId: filename,
+            index: index + 1,
+            isVideo: isVideo
+        });
+    });
+    return mediaLinks;
+}
+
+function updateMasonryGrid() {
+    const gridContainer = document.getElementById('fcm_masonry');
+    if (gridContainer) {
+        gridContainer.style.columnCount = gridRows;
+    }
+}
+
+function createTopBar() {
+
+    const topbar = document.createElement("div");
+    topbar.id = "fcm_topbar";
+
+    const sliderContainer = document.createElement('div');
+    sliderContainer.className = "sliderCont";
+
+    const slider = document.createElement('input');
+    slider.type = 'range';
+    slider.id = "setting_slider_cols";
+    slider.min = gridRowsMin;
+    slider.max = gridRowsMax;
+    slider.step = "1";
+    slider.value = gridRows;
+
+    const valueDisplay = document.createElement('span');
+    valueDisplay.textContent = gridRows;
+    valueDisplay.style.cssText = `
+        color: white;
+        font-weight: bold;
+        font-size: 16px;
+        min-width: 20px;
+    `;
+
+    slider.addEventListener('input', (e) => {
+        gridRows = parseInt(e.target.value);
+        valueDisplay.textContent = gridRows;
+        updateMasonryGrid();
+    });
+
+
+    function slider_left() { slider.value = Math.max(Number(slider.value) - Number(slider.step), slider.min); }
+    function slider_right() { slider.value = Math.min(Number(slider.value) + Number(slider.step), slider.max); }
+
+    slider.addEventListener('keydown', (event) => {
+        switch (event.key) {
+            case 'ArrowLeft': slider_left(); break;
+            case 'ArrowRight': slider_right(); break;
+        }
+    });
+
+    slider.focus();
+    slider.select();
+
+    sliderContainer.appendChild(slider);
+    sliderContainer.appendChild(valueDisplay);
+
+    topbar.appendChild(sliderContainer);
+
+
+    // Close button
+    const closeButton = document.createElement('button');
+    closeButton.className = "fcm_close";
+    closeButton.innerHTML = '✕';
+
+    closeButton.addEventListener('mouseenter', () => { closeButton.style.background = '#b71c1c'; });
+    closeButton.addEventListener('mouseleave', () => { closeButton.style.background = '#d32f2f'; });
+    closeButton.addEventListener('click', closeGrid);
+
+    topbar.appendChild(closeButton);
+    return topbar;
+}
+
+function createMasonryGrid(mediaLinks) {
+    const overlay = document.createElement('div');
+    overlay.id = 'fcm_overlay';
+
+
+    const topbar = createTopBar();
+
+    let lastScroll = 0;
+    overlay.addEventListener("scroll", () => {
+      const currentScroll = overlay.scrollTop;
+
+      if (currentScroll > lastScroll) { topbar.style.transform = "translateY(-100%)"; }
+      else { topbar.style.transform = "translateY(0)"; }
+
+      lastScroll = currentScroll;
+    });
+
+    overlay.appendChild(topbar);
+
+    const container = document.createElement('div');
+    container.style.cssText = `
+        max-width: 97vw;
+        margin: 0 auto;
+    `;
+
+    const handleParentClick = (event) => {
+        event.preventDefault();
+        if (event.target === event.currentTarget) {
+          closeGrid();
+        }
+    };
+
+    overlay.addEventListener('click', handleParentClick);
+    container.addEventListener('click', handleParentClick);
+    topbar.addEventListener('click', handleParentClick);
+
+    // Grid container
+    const gridContainer = document.createElement('div');
+    gridContainer.id = 'fcm_masonry';
+    gridContainer.style.columnCount = gridRows;
+
+    // Create image elements
+    mediaLinks.forEach((mediaData, index) => {
+        const mediaWrapper = document.createElement('div');
+        mediaWrapper.style.cssText = `
+            position: relative;
+            overflow: hidden;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
         `;
 
-        // Create image elements
-        mediaLinks.forEach((mediaData, index) => {
-            const mediaWrapper = document.createElement('div');
-            mediaWrapper.style.cssText = `
-                position: relative;
-                overflow: hidden;
-                border-radius: 8px;
+        if (mediaData.isVideo) {
+            // Thumbnail image
+            const thumbImg = document.createElement('img');
+            thumbImg.src = mediaData.thumbnail;
+            thumbImg.style.cssText = `
+                width: 100%;
+                height: $(mediaData.height);
+                display: block;
+                object-fit: cover;
                 cursor: pointer;
-                transition: transform 0.3s ease, box-shadow 0.3s ease;
             `;
+            mediaWrapper.appendChild(thumbImg);
 
-            if (mediaData.isVideo) {
-                // Thumbnail image
-                const thumbImg = document.createElement('img');
-                thumbImg.src = mediaData.thumbnail;
-                thumbImg.style.cssText = `
-                    width: 100%;
-                    height: $(mediaData.height);
-                    display: block;
-                    object-fit: cover;
-                    cursor: pointer;
-                `;
-                mediaWrapper.appendChild(thumbImg);
+            // Play button overlay
+            const playBtn = document.createElement('div');
+            playBtn.style.cssText = `
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                width: 50px;
+                height: 50px;
+                background: rgba(0,0,0,0.5);
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 24px;
+                color: white;
+                pointer-events: none;
+                opacity: 0.4;
+            `;
+            playBtn.innerHTML = '&#9658;';
+            mediaWrapper.appendChild(playBtn);
 
-                // Play button overlay
-                const playBtn = document.createElement('div');
-                playBtn.style.cssText = `
-                    position: absolute;
-                    top: 50%;
-                    left: 50%;
-                    transform: translate(-50%, -50%);
-                    width: 50px;
-                    height: 50px;
-                    background: rgba(0,0,0,0.5);
-                    border-radius: 50%;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-size: 24px;
-                    color: white;
-                    pointer-events: none;
-                    opacity: 0.4;
-                `;
-                playBtn.innerHTML = '&#9658;';
-                mediaWrapper.appendChild(playBtn);
+            let video = null;
+            let hoverTimeout = null;
+            let videoLoaded = false;
 
-                let video = null;
-                let hoverTimeout = null;
-                let videoLoaded = false;
+            // Hover in → wait 100ms → load and play muted video
+            mediaWrapper.addEventListener('mouseenter', () => {
+                hoverTimeout = setTimeout(() => {
+                    if (!video) {
+                        video = document.createElement('video');
+                        video.src = mediaData.url;
+                        video.style.cssText = `
+                            width: 100%;
+                            height: $(mediaData.height);
+                            object-fit: contain;
+                            display: none;
+                        `;
+                        video.loop = true;
+                        video.muted = true;
+                        video.playsInline = true;
 
-                // Hover in → wait 100ms → load and play muted video
-                mediaWrapper.addEventListener('mouseenter', () => {
-                    hoverTimeout = setTimeout(() => {
-                        if (!video) {
-                            video = document.createElement('video');
-                            video.src = mediaData.url;
-                            video.style.cssText = `
-                                width: 100%;
-                                height: $(mediaData.height);
-                                object-fit: contain;
-                                display: none;
-                            `;
-                            video.loop = true;
-                            video.muted = true;
-                            video.playsInline = true;
-
-                            video.addEventListener('canplay', () => {
-                                videoLoaded = true;
-                                thumbImg.style.display = 'none';
-                                playBtn.style.display = 'none';
-                                video.style.display = 'block';
-                                video.play().catch(() => {});
-                            });
-
-                            mediaWrapper.appendChild(video);
-                        } else if (videoLoaded) {
+                        video.addEventListener('canplay', () => {
+                            videoLoaded = true;
                             thumbImg.style.display = 'none';
                             playBtn.style.display = 'none';
                             video.style.display = 'block';
                             video.play().catch(() => {});
-                        }
-                    }, 100);
-                });
+                        });
 
-                // Hover out → only reset if not clicked
-                // mediaWrapper.addEventListener('mouseleave', () => {
-                //     clearTimeout(hoverTimeout);
-                //     if (video) {
-                //         video.pause();
-                //         video.style.display = 'none';
-                //         thumbImg.style.display = 'block';
-                //         playBtn.style.display = 'flex';
-                //     }
-                // });
-
-                // Click → unmute, controls on, persistent
-                mediaWrapper.addEventListener('click', (e) => {
-                    if (video && !video.controls) {
-                        e.preventDefault();
-                        video.muted = false;
-                        video.controls = true;
-                        video.autoplay = true;
+                        mediaWrapper.appendChild(video);
+                    } else if (videoLoaded) {
                         thumbImg.style.display = 'none';
                         playBtn.style.display = 'none';
                         video.style.display = 'block';
                         video.play().catch(() => {});
                     }
-                });
-            }
-            else {
-                const img = document.createElement('img');
-                img.src = mediaData.thumbnail;
-                img.loading = 'lazy';
-                img.style.cssText = `
-                    width: 100%;
-                    height: $(mediaData.height);
-                    object-fit: contain;
-                    display: block;
-                    transition: opacity 0.3s ease;
-                `;
-                mediaWrapper.appendChild(img);
-
-                // Preload full image in background
-                const fullImg = new Image();
-                fullImg.src = mediaData.url;
-                fullImg.onload = () => {
-                    img.style.opacity = '0'; // fade out thumbnail
-                    setTimeout(() => {
-                        img.src = fullImg.src; // replace with full image
-                        img.style.opacity = '1'; // fade in full image
-                    }, 200); // delay so fade-out is visible
-                };
-            }
-
-            // Filename tooltip
-            const tooltip = document.createElement('div');
-            tooltip.textContent = mediaData.originalName;
-            tooltip.style.cssText = `
-                position: absolute;
-                bottom: 0;
-                left: 0;
-                right: 0;
-                background: rgba(0,0,0,0.8);
-                color: white;
-                padding: 8px;
-                font-size: 12px;
-                transform: translateY(100%);
-                transition: transform 0.3s ease;
-                word-break: break-all;
-            `;
-
-            // Hover effects
-            mediaWrapper.addEventListener('mouseenter', () => {
-                mediaWrapper.style.transform = 'scale(1.05)';
-                mediaWrapper.style.boxShadow = '0 8px 25px rgba(0,0,0,0.6)';
-                mediaWrapper.style.zIndex = '100';
-                tooltip.style.transform = 'translateY(0)';
+                }, 100);
             });
 
+            // Hover out → only reset if not clicked
             mediaWrapper.addEventListener('mouseleave', () => {
-                mediaWrapper.style.transform = 'scale(1)';
-                mediaWrapper.style.boxShadow = 'none';
-                mediaWrapper.style.zIndex = '1';
-                tooltip.style.transform = 'translateY(100%)';
-            });
-
-            // Click middle click to open full size
-            mediaWrapper.addEventListener('mousedown', (event) => {
-                if (event.button === 1) {
-                    // 0 = left, 1 = middle, 2 = right
-                    window.open(mediaData.url, '_blank');
+                clearTimeout(hoverTimeout);
+                if (video) {
+                    video.pause();
+                    video.style.display = 'none';
+                    thumbImg.style.display = 'block';
+                    playBtn.style.display = 'flex';
                 }
             });
 
-            mediaWrapper.appendChild(tooltip);
-            gridContainer.appendChild(mediaWrapper);
+            // Click → unmute, controls on, persistent
+            mediaWrapper.addEventListener('click', (e) => {
+                if (video && !video.controls) {
+                    e.preventDefault();
+                    video.muted = false;
+                    video.controls = true;
+                    video.autoplay = true;
+                    thumbImg.style.display = 'none';
+                    playBtn.style.display = 'none';
+                    video.style.display = 'block';
+                    video.play().catch(() => {});
+                }
+            });
+        }
+        else {
+            const img = document.createElement('img');
+            img.src = mediaData.thumbnail;
+            img.loading = 'lazy';
+            img.style.cssText = `
+                width: 100%;
+                height: $(mediaData.height);
+                object-fit: contain;
+                display: block;
+                transition: opacity 0.3s ease;
+            `;
+            mediaWrapper.appendChild(img);
+
+            // Preload full image in background
+            const fullImg = new Image();
+            fullImg.src = mediaData.url;
+            fullImg.onload = () => {
+                img.style.opacity = '0'; // fade out thumbnail
+                setTimeout(() => {
+                    img.src = fullImg.src; // replace with full image
+                    img.style.opacity = '1'; // fade in full image
+                }, 200); // delay so fade-out is visible
+            };
+        }
+
+        // Filename tooltip
+        const tooltip = document.createElement('div');
+        tooltip.textContent = mediaData.originalName;
+        tooltip.style.cssText = `
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 8px;
+            font-size: 12px;
+            transform: translateY(100%);
+            transition: transform 0.3s ease;
+            word-break: break-all;
+        `;
+
+        // Hover effects
+        mediaWrapper.addEventListener('mouseenter', () => {
+            mediaWrapper.style.transform = 'scale(1.05)';
+            mediaWrapper.style.boxShadow = '0 8px 25px rgba(0,0,0,0.6)';
+            mediaWrapper.style.zIndex = '100';
+            tooltip.style.transform = 'translateY(0)';
         });
 
-        container.appendChild(sliderContainer);
-        container.appendChild(gridContainer);
-        overlay.appendChild(closeButton);
-        overlay.appendChild(container);
+        mediaWrapper.addEventListener('mouseleave', () => {
+            mediaWrapper.style.transform = 'scale(1)';
+            mediaWrapper.style.boxShadow = 'none';
+            mediaWrapper.style.zIndex = '1';
+            tooltip.style.transform = 'translateY(100%)';
+        });
 
-        return overlay;
-    }
-
-    function openGrid() {
-        if (isGridOpen) return;
-
-        const mediaLinks = findMediaLinks();
-        if (mediaLinks.length === 0) {
-            alert('No media found on this page!');
-            return;
-        }
-
-        gridOverlay = createMasonryGrid(mediaLinks);
-        document.body.appendChild(gridOverlay);
-        isGridOpen = true;
-
-        // Prevent body scrolling
-        document.body.style.overflow = 'hidden';
-
-        // Close on escape key
-        document.addEventListener('keydown', handleEscapeKey);
-    }
-
-    function closeGrid() {
-        if (!isGridOpen || !gridOverlay) return;
-
-        document.body.removeChild(gridOverlay);
-        gridOverlay = null;
-        isGridOpen = false;
-
-        // Restore body scrolling
-        document.body.style.overflow = 'auto';
-
-        // Remove escape key listener
-        document.removeEventListener('keydown', handleEscapeKey);
-    }
-
-    function handleEscapeKey(e) {
-        if (e.key === 'Escape') {
-            closeGrid();
-        }
-    }
-
-    async function init() {
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', init);
-            return;
-        }
-
-        setTimeout(async () => {
-            try {
-                initUI();
-
-            } catch (error) {
-                console.error('Error initializing userscript:', error);
+        // Click middle click to open full size
+        mediaWrapper.addEventListener('mousedown', (event) => {
+            if (event.button === 1) {
+                // 0 = left, 1 = middle, 2 = right
+                window.open(mediaData.url, '_blank');
             }
-        }, 500);
+        });
+
+        mediaWrapper.appendChild(tooltip);
+        gridContainer.appendChild(mediaWrapper);
+    });
+
+    container.appendChild(gridContainer);
+    overlay.appendChild(container);
+
+    return overlay;
+}
+
+function openGrid() {
+    if (isGridOpen) return;
+
+    const mediaLinks = findMediaLinks();
+    if (mediaLinks.length === 0) {
+        alert('No media found on this page!');
+        return;
     }
 
-    init();
+    gridOverlay = createMasonryGrid(mediaLinks);
+    document.body.appendChild(gridOverlay);
+    isGridOpen = true;
 
-})();
+    // Prevent body scrolling
+    document.body.style.overflow = 'hidden';
+
+    // Close on escape key
+    document.addEventListener('keydown', handleEscapeKey);
+}
+
+function closeGrid() {
+    if (!isGridOpen || !gridOverlay) return;
+
+    document.body.removeChild(gridOverlay);
+    gridOverlay = null;
+    isGridOpen = false;
+
+    // Restore body scrolling
+    document.body.style.overflow = 'auto';
+
+    // Remove escape key listener
+    document.removeEventListener('keydown', handleEscapeKey);
+}
+
+function handleEscapeKey(e) {
+    if (e.key === 'Escape') {
+        closeGrid();
+    }
+}
+
+async function init() {
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+        return;
+    }
+
+    setTimeout(async () => {
+        try {
+            initUI();
+
+        } catch (error) {
+            console.error('Error initializing userscript:', error);
+        }
+    }, 500);
+}
+
+init();
