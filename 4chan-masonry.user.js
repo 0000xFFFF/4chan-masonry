@@ -93,7 +93,8 @@ var MasonryCss = `
 }
 
 .fcm_shortcut_4chanx img {
-    height: 15px;
+    width: 16px;
+    height: 13px;
 }
 
 .fcm_button_regular {
@@ -213,7 +214,7 @@ var MasonryCss = `
 GM_addStyle(MasonryCss);
 
 
-const userscript_icon = "data:image/ico;base64,AAABAAEAEBAAAAEAIADMAAAAFgAAAIlQTkcNChoKAAAADUlIRFIAAAAQAAAAEAgGAAAAH/P/YQAAAJNJREFUeJxjYBhM4D8SJlnN/7QzxnCsFSyKFSOrwWpI9DZdsEI0m+AYJAdSg6EZ2RY0TV9grkM2BEktQjMuW2EY2RBkgxjwaUbzL7ohr+AGIBsCVfQHmwFYXQAEbDgMwRuYUPVsGAEpqMSB0xCMAESPRlyxgSyONRphBuBLSElHDfEmIrgBaM4nRg7VEDSaWDnyAQA+Ad0pEUxcvAAAAABJRU5ErkJggg==";
+const userscript_icon = "data:image/ico;base64,AAABAAEAEA0AAAEAIADLAAAAFgAAAIlQTkcNChoKAAAADUlIRFIAAAAQAAAADQgGAAAAoLvuJAAAAJJJREFUeJxjYECA/0gYF8Cp5n/aGWM41goWxYqR1WA1JHqbLlghmk1wDJIDqcHQjGwLmqYvMNchG4KkFqEZl60wjGwIskEM+DSj+RfdkFdwA5ANgSr6g80ArC4AAjYchuANTKh6NoyAFFTiwGkIRgCiRyOu2EAWxxqNMAPwJaSko4Z4ExHcADTnEyOHaggaTVAOABLO3SkZ/WViAAAAAElFTkSuQmCC";
 
 const gridRowsMin = 1;
 const gridRowsMax = 15;
