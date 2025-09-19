@@ -35,32 +35,46 @@ var MasonryCss = `
 
 #fcm_topbar {
     position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
     display: flex;
-    padding: 0 10px;
-    width: 100vw;
-    margin: 0;
-    background-color: rgba(0, 0, 0, 0.4);
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    background-color: rgba(0, 0, 0, 0.8);
     color: #fff;
     z-index: 999;
-    transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
-    will-change: transform, opacity;
+    transition: transform 0.3s ease-in-out;
+    will-change: transform;
+    backdrop-filter: blur(5px);
+}
+
+.fcm_slider_container {
+    display: flex;
+    align-items: center;
+    gap: 15px;
 }
 
 .fcm_close {
-    padding: 3px;
+    padding: 8px 12px;
     background: #d32f2f;
     color: white;
     border: none;
-    border-radius: 5px;
+    border-radius: 8px;
     cursor: pointer;
-    font-size: 10px;
+    font-size: 14px;
     font-weight: bold;
-    z-index: 10001;
-    transition: background 0.3s ease;
+    transition: all 0.2s ease;
+    min-width: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .fcm_close:hover {
     background: #b71c1c;
+    transform: scale(1.05);
 }
 
 #fcm_masonry {
@@ -125,7 +139,6 @@ var MasonryCss = `
     min-width: 20px;
 }
 
-/* Media wrapper */
 .fcm_media_wrapper {
     position: relative;
     overflow: hidden;
@@ -140,7 +153,6 @@ var MasonryCss = `
     z-index: 100;
 }
 
-/* Media elements */
 .fcm_media_img,
 .fcm_media_thumb,
 .fcm_media_video {
@@ -178,7 +190,6 @@ var MasonryCss = `
     opacity: 0.4;
 }
 
-/* Tooltip */
 .fcm_tooltip {
     position: absolute;
     bottom: 0;
@@ -350,7 +361,7 @@ function createTopBar() {
     topbar.id = "fcm_topbar";
 
     const sliderContainer = document.createElement('div');
-    sliderContainer.className = "sliderCont";
+    sliderContainer.className = "fcm_slider_container";
 
     const slider = document.createElement('input');
     slider.type = 'range';
