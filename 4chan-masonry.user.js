@@ -251,13 +251,13 @@ function isNearViewport(element, buffer = PRELOAD_VIEWPORT_BUFFER) {
 }
 
 // Queue-based image preloader
-async function preloadImage(url, priority = 'low') {
+async function preloadMedia(url, priority = 'low', type = 'image') {
     if (preloadCache.has(url)) {
         return preloadCache.get(url);
     }
 
     return new Promise((resolve, reject) => {
-        loadQueue.push({ url, resolve, reject, priority, type: 'image' });
+        loadQueue.push({ url, resolve, reject, priority, type });
         processLoadQueue();
     });
 }
@@ -347,7 +347,7 @@ const imageObserver = new IntersectionObserver((entries) => {
             if (fullUrl && !img.dataset.loading) {
                 img.dataset.loading = 'true';
 
-                preloadImage(fullUrl, 'high').then((fullImg) => {
+                preloadMedia(fullUrl, 'high').then((fullImg) => {
                     img.style.opacity = '0';
                     setTimeout(() => {
                         img.src = fullImg.src;
@@ -428,9 +428,16 @@ function createOptimizedVideoElement(mediaData, thumbImg, playBtn, mediaWrapper)
                 if (videoLoaded) {
                     // Video already loaded, show immediately
                     showVideo();
-                } else if (!vid.src) {
-                    // Start loading video
-                    vid.src = mediaData.url;
+                }
+                else if (!vid.src) {
+                    // Queue the video load instead of hitting server immediately
+                    preloadMedia(mediaData.url, 'high', 'video')
+                        .then((videoEl) => {
+                            vid.src = mediaData.url;
+                        })
+                        .catch(() => {
+                            console.warn("Failed to queue video load:", mediaData.url);
+                        });
                 }
                 // If video is loading, showVideo() will be called from 'canplay' event
             }
