@@ -59,6 +59,10 @@ var MasonryCss = `
     transition: background 0.3s ease;
 }
 
+.fcm_close:hover {
+    background: #b71c1c;
+}
+
 #fcm_masonry {
     display: block;
     gap: 10px;
@@ -66,6 +70,132 @@ var MasonryCss = `
     column-gap: 5px;
 }
 
+.fcm_shortcut_4chanx {
+    margin: 0 0 0 5px;
+    padding: 0;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+}
+
+.fcm_shortcut_4chanx img {
+    height: 15px;
+}
+
+.fcm_button_regular {
+    padding: 12px 18px;
+    display: flex;
+    gap: 5px;
+    background: #2d5016;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: bold;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    transition: all 0.3s ease;
+    white-space: nowrap;
+}
+
+.fcm_button_regular:hover {
+    background: #4a7c21;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+}
+
+.fcm_button_regular img {
+    height: 15px;
+}
+
+.fcm_container {
+    display: flex;
+    margin: 15px 0 15px 0;
+}
+
+.fcm_grid_container {
+    max-width: 97vw;
+    margin: 0 auto;
+}
+
+.fcm_value_display {
+    color: white;
+    font-weight: bold;
+    font-size: 16px;
+    min-width: 20px;
+}
+
+/* Media wrapper */
+.fcm_media_wrapper {
+    position: relative;
+    overflow: hidden;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.fcm_media_wrapper:hover {
+    transform: scale(1.05);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.6);
+    z-index: 100;
+}
+
+/* Media elements */
+.fcm_media_img,
+.fcm_media_thumb,
+.fcm_media_video {
+    width: 100%;
+    display: block;
+    object-fit: cover;
+    cursor: pointer;
+}
+
+.fcm_media_img {
+    object-fit: contain;
+    transition: opacity 0.3s ease;
+}
+
+.fcm_media_video {
+    object-fit: contain;
+    display: none;
+}
+
+.fcm_play_btn {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 50px;
+    height: 50px;
+    background: rgba(0,0,0,0.5);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    color: white;
+    pointer-events: none;
+    opacity: 0.4;
+}
+
+/* Tooltip */
+.fcm_tooltip {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(0,0,0,0.8);
+    color: white;
+    padding: 8px;
+    font-size: 12px;
+    transform: translateY(100%);
+    transition: transform 0.3s ease;
+    word-break: break-all;
+}
+
+.fcm_media_wrapper:hover .fcm_tooltip {
+    transform: translateY(0);
+}
 
 `;
 
@@ -94,48 +224,19 @@ function initUI() {
 
         const element = document.getElementById("shortcut-watcher");
         button.id = "shortcut-masonry";
-        button.style.cssText = `
-            margin: 0 0 0 5px;
-            padding 0;
-            cursor: pointer;
-            display: flex;
-            justify-content: center;
-        `;
-        button.className = "shortcut brackets-wrap";
+        button.className = "shortcut brackets-wrap fcm_shortcut_4chanx";
 
         const img = document.createElement("img");
-        img.style.cssText = `
-            height: 15px;
-        `
         img.src = userscript_icon;
         button.appendChild(img);
 
         forchanX_header.appendChild(button);
-
-
         element.parentElement.insertBefore(button, element);
     }
     else {
-        button.style.cssText = `
-            padding: 12px 18px;
-            display: flex;
-            gap: 5px;
-            background: #2d5016;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: bold;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-            transition: all 0.3s ease;
-            white-space: nowrap;
-        `;
+        button.className = "fcm_button_regular";
 
         const img = document.createElement("img");
-        img.style.cssText = `
-            height: 15px;
-        `
         img.src = userscript_icon;
         button.appendChild(img);
 
@@ -143,31 +244,14 @@ function initUI() {
         span.innerHTML = "Masonry Grid";
         button.appendChild(span);
 
-        // Hover effect
-        button.addEventListener('mouseenter', () => {
-            button.style.background = '#4a7c21';
-            button.style.transform = 'translateY(-2px)';
-            button.style.boxShadow = '0 6px 20px rgba(0,0,0,0.4)';
-        });
-
-        button.addEventListener('mouseleave', () => {
-            button.style.background = '#2d5016';
-            button.style.transform = 'translateY(0)';
-            button.style.boxShadow = '0 4px 15px rgba(0,0,0,0.3)';
-        });
-
         const containerDiv = document.createElement('div');
         containerDiv.id = "4chan_grid_cont";
-        containerDiv.style.cssText = `
-            display: flex;
-            margin: 15px 0 15px 0;
-        `;
+        containerDiv.className = "fcm_container";
 
         containerDiv.appendChild(button);
         const threadElement = document.querySelector(".thread");
         threadElement.parentElement.insertBefore(containerDiv, threadElement);
     }
-
 
     findMediaLinks(button);
 }
@@ -211,7 +295,6 @@ function findMediaLinks(button = null) {
                     height = width_and_height[1];
                 }
 
-
                 const newElement = {
                     url: url,
                     originalName: originalName,
@@ -223,16 +306,13 @@ function findMediaLinks(button = null) {
                     height: height
                 };
                 mediaLinks.push(newElement);
-
             }
         }
     });
 
-
     if (button) {
         button.title = `Masonry Grid (${mediaLinks.length})`;
     }
-
 
     return mediaLinks;
 }
@@ -266,7 +346,6 @@ function updateMasonryGrid() {
 }
 
 function createTopBar() {
-
     const topbar = document.createElement("div");
     topbar.id = "fcm_topbar";
 
@@ -283,19 +362,13 @@ function createTopBar() {
 
     const valueDisplay = document.createElement('span');
     valueDisplay.textContent = gridRows;
-    valueDisplay.style.cssText = `
-        color: white;
-        font-weight: bold;
-        font-size: 16px;
-        min-width: 20px;
-    `;
+    valueDisplay.className = "fcm_value_display";
 
     slider.addEventListener('input', (e) => {
         gridRows = parseInt(e.target.value);
         valueDisplay.textContent = gridRows;
         updateMasonryGrid();
     });
-
 
     function slider_left() { slider.value = Math.max(Number(slider.value) - Number(slider.step), slider.min); }
     function slider_right() { slider.value = Math.min(Number(slider.value) + Number(slider.step), slider.max); }
@@ -312,17 +385,12 @@ function createTopBar() {
 
     sliderContainer.appendChild(slider);
     sliderContainer.appendChild(valueDisplay);
-
     topbar.appendChild(sliderContainer);
-
 
     // Close button
     const closeButton = document.createElement('button');
     closeButton.className = "fcm_close";
     closeButton.innerHTML = '✕';
-
-    closeButton.addEventListener('mouseenter', () => { closeButton.style.background = '#b71c1c'; });
-    closeButton.addEventListener('mouseleave', () => { closeButton.style.background = '#d32f2f'; });
     closeButton.addEventListener('click', closeGrid);
 
     topbar.appendChild(closeButton);
@@ -332,7 +400,6 @@ function createTopBar() {
 function createMasonryGrid(mediaLinks) {
     const overlay = document.createElement('div');
     overlay.id = 'fcm_overlay';
-
 
     const topbar = createTopBar();
 
@@ -349,10 +416,7 @@ function createMasonryGrid(mediaLinks) {
     overlay.appendChild(topbar);
 
     const container = document.createElement('div');
-    container.style.cssText = `
-        max-width: 97vw;
-        margin: 0 auto;
-    `;
+    container.className = "fcm_grid_container";
 
     const handleParentClick = (event) => {
         event.preventDefault();
@@ -373,46 +437,18 @@ function createMasonryGrid(mediaLinks) {
     // Create image elements
     mediaLinks.forEach((mediaData, index) => {
         const mediaWrapper = document.createElement('div');
-        mediaWrapper.style.cssText = `
-            position: relative;
-            overflow: hidden;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        `;
+        mediaWrapper.className = "fcm_media_wrapper";
 
         if (mediaData.isVideo) {
             // Thumbnail image
             const thumbImg = document.createElement('img');
             thumbImg.src = mediaData.thumbnail;
-            thumbImg.style.cssText = `
-                width: 100%;
-                height: $(mediaData.height);
-                display: block;
-                object-fit: cover;
-                cursor: pointer;
-            `;
+            thumbImg.className = "fcm_media_thumb";
             mediaWrapper.appendChild(thumbImg);
 
             // Play button overlay
             const playBtn = document.createElement('div');
-            playBtn.style.cssText = `
-                position: absolute;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
-                width: 50px;
-                height: 50px;
-                background: rgba(0,0,0,0.5);
-                border-radius: 50%;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 24px;
-                color: white;
-                pointer-events: none;
-                opacity: 0.4;
-            `;
+            playBtn.className = "fcm_play_btn";
             playBtn.innerHTML = '&#9658;';
             mediaWrapper.appendChild(playBtn);
 
@@ -426,12 +462,7 @@ function createMasonryGrid(mediaLinks) {
                     if (!video) {
                         video = document.createElement('video');
                         video.src = mediaData.url;
-                        video.style.cssText = `
-                            width: 100%;
-                            height: $(mediaData.height);
-                            object-fit: contain;
-                            display: none;
-                        `;
+                        video.className = "fcm_media_video";
                         video.loop = true;
                         video.muted = true;
                         video.playsInline = true;
@@ -483,13 +514,7 @@ function createMasonryGrid(mediaLinks) {
             const img = document.createElement('img');
             img.src = mediaData.thumbnail;
             img.loading = 'lazy';
-            img.style.cssText = `
-                width: 100%;
-                height: $(mediaData.height);
-                object-fit: contain;
-                display: block;
-                transition: opacity 0.3s ease;
-            `;
+            img.className = "fcm_media_img";
             mediaWrapper.appendChild(img);
 
             // Preload full image in background
@@ -507,34 +532,7 @@ function createMasonryGrid(mediaLinks) {
         // Filename tooltip
         const tooltip = document.createElement('div');
         tooltip.textContent = mediaData.originalName;
-        tooltip.style.cssText = `
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: rgba(0,0,0,0.8);
-            color: white;
-            padding: 8px;
-            font-size: 12px;
-            transform: translateY(100%);
-            transition: transform 0.3s ease;
-            word-break: break-all;
-        `;
-
-        // Hover effects
-        mediaWrapper.addEventListener('mouseenter', () => {
-            mediaWrapper.style.transform = 'scale(1.05)';
-            mediaWrapper.style.boxShadow = '0 8px 25px rgba(0,0,0,0.6)';
-            mediaWrapper.style.zIndex = '100';
-            tooltip.style.transform = 'translateY(0)';
-        });
-
-        mediaWrapper.addEventListener('mouseleave', () => {
-            mediaWrapper.style.transform = 'scale(1)';
-            mediaWrapper.style.boxShadow = 'none';
-            mediaWrapper.style.zIndex = '1';
-            tooltip.style.transform = 'translateY(100%)';
-        });
+        tooltip.className = "fcm_tooltip";
 
         // Click middle click to open full size
         mediaWrapper.addEventListener('mousedown', (event) => {
