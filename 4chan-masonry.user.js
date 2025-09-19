@@ -222,6 +222,7 @@ let gridRows = 12;
 let isGridOpen = false;
 let gridOverlay = null;
 
+// Add these variables at the top level
 const CONCURRENT_LOADS = 3; // Maximum concurrent downloads
 const LOAD_DELAY = 200; // Delay between batches (ms)
 const PRELOAD_VIEWPORT_BUFFER = 200; // Load images within 200px of viewport
@@ -364,14 +365,13 @@ const imageObserver = new IntersectionObserver((entries) => {
     rootMargin: '200px' // Start loading 200px before entering viewport
 });
 
-// Modified video preloading with better control
 function createOptimizedVideoElement(mediaData, thumbImg, playBtn, mediaWrapper) {
     let video = null;
     let videoLoaded = false;
     let hoverTimeout = null;
-    let preloadPromise = null;
+    let isHovering = false;
 
-    // Pre-create video element but don't load yet
+    // Create and setup video element
     const createVideo = () => {
         if (!video) {
             video = document.createElement('video');
@@ -379,13 +379,18 @@ function createOptimizedVideoElement(mediaData, thumbImg, playBtn, mediaWrapper)
             video.loop = true;
             video.muted = true;
             video.playsInline = true;
-            video.preload = 'none'; // Don't preload until needed
+            video.style.display = 'none';
             
             video.addEventListener('canplay', () => {
                 videoLoaded = true;
-                if (video.style.display === 'block') {
-                    video.play().catch(() => {});
+                // Only play if still hovering and video should be visible
+                if (isHovering && !video.controls) {
+                    showVideo();
                 }
+            });
+
+            video.addEventListener('loadstart', () => {
+                console.log('Video loading started:', mediaData.url);
             });
 
             mediaWrapper.appendChild(video);
@@ -393,66 +398,77 @@ function createOptimizedVideoElement(mediaData, thumbImg, playBtn, mediaWrapper)
         return video;
     };
 
-    // Optimized hover handler
-    mediaWrapper.addEventListener('mouseenter', () => {
-        clearTimeout(hoverTimeout);
-        hoverTimeout = setTimeout(() => {
-            const vid = createVideo();
-            
-            // Only start loading if not already loaded or loading
-            if (!videoLoaded && !preloadPromise) {
-                preloadPromise = new Promise((resolve) => {
-                    vid.addEventListener('loadedmetadata', resolve, { once: true });
-                    vid.src = mediaData.url;
-                });
-                
-                preloadPromise.then(() => {
-                    if (vid.style.display === 'block') {
-                        thumbImg.style.display = 'none';
-                        playBtn.style.display = 'none';
-                        vid.play().catch(() => {});
-                    }
-                });
-            }
-            
-            if (videoLoaded) {
-                thumbImg.style.display = 'none';
-                playBtn.style.display = 'none';
-                vid.style.display = 'block';
-                vid.play().catch(() => {});
-            } else {
-                vid.style.display = 'block';
-            }
-        }, 300); // Increased delay to avoid accidental loads
-    });
+    const showVideo = () => {
+        if (video && videoLoaded) {
+            thumbImg.style.display = 'none';
+            playBtn.style.display = 'none';
+            video.style.display = 'block';
+            video.play().catch(() => {});
+        }
+    };
 
-    // Hover out handler
-    mediaWrapper.addEventListener('mouseleave', () => {
-        clearTimeout(hoverTimeout);
+    const hideVideo = () => {
         if (video && !video.controls) {
             video.pause();
             video.style.display = 'none';
             thumbImg.style.display = 'block';
             playBtn.style.display = 'flex';
         }
+    };
+
+    // Hover enter - start loading after delay
+    mediaWrapper.addEventListener('mouseenter', () => {
+        isHovering = true;
+        clearTimeout(hoverTimeout);
+        
+        hoverTimeout = setTimeout(() => {
+            if (isHovering) { // Double-check still hovering
+                const vid = createVideo();
+                
+                if (videoLoaded) {
+                    // Video already loaded, show immediately
+                    showVideo();
+                } else if (!vid.src) {
+                    // Start loading video
+                    vid.src = mediaData.url;
+                }
+                // If video is loading, showVideo() will be called from 'canplay' event
+            }
+        }, 100); // Reduced delay for better responsiveness
     });
 
-    // Click handler
+    // // Hover leave - hide video and cancel loading if needed
+    // mediaWrapper.addEventListener('mouseleave', () => {
+    //     isHovering = false;
+    //     clearTimeout(hoverTimeout);
+    //     hideVideo();
+    // });
+
+    // Click handler - permanent video with controls
     mediaWrapper.addEventListener('click', (e) => {
+        if (!video || video.controls) return; // Already clicked or no video
+        
+        e.preventDefault();
         const vid = createVideo();
-        if (!vid.controls) {
-            e.preventDefault();
-            vid.muted = false;
-            vid.controls = true;
-            vid.autoplay = true;
-            vid.style.display = 'block';
-            thumbImg.style.display = 'none';
-            playBtn.style.display = 'none';
-            
-            if (!preloadPromise) {
-                vid.src = mediaData.url;
-            }
+        
+        // Set up for permanent display
+        vid.muted = false;
+        vid.controls = true;
+        vid.style.display = 'block';
+        thumbImg.style.display = 'none';
+        playBtn.style.display = 'none';
+        
+        if (!vid.src) {
+            vid.src = mediaData.url;
+        }
+        
+        // Play when ready
+        if (videoLoaded) {
             vid.play().catch(() => {});
+        } else {
+            vid.addEventListener('canplay', () => {
+                vid.play().catch(() => {});
+            }, { once: true });
         }
     });
 }
@@ -515,15 +531,15 @@ function cleanupPreloading() {
     loadQueue = [];
     activeLoads = 0;
     
-    // Clear cache periodically to prevent memory leaks
-    if (preloadCache.size > 100) {
-        preloadCache.clear();
-    }
+    // this is handles with refresh
+    // // Clear cache periodically to prevent memory leaks
+    // if (preloadCache.size > 100) {
+    //     preloadCache.clear();
+    // }
     
     // Disconnect observer
     imageObserver.disconnect();
 }
-
 
 function initUI() {
     const button = document.createElement('span');
