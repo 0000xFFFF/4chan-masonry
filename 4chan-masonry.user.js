@@ -241,7 +241,7 @@ function isNearViewport(element, buffer = PRELOAD_VIEWPORT_BUFFER) {
     const rect = element.getBoundingClientRect();
     const windowHeight = window.innerHeight;
     const windowWidth = window.innerWidth;
-    
+
     return (
         rect.bottom >= -buffer &&
         rect.top <= windowHeight + buffer &&
@@ -298,7 +298,7 @@ function loadMedia(url, type) {
     return new Promise((resolve, reject) => {
         if (type === 'image') {
             const img = new Image();
-            
+
             const timeout = setTimeout(() => {
                 reject(new Error('Image load timeout'));
             }, 10000); // 10 second timeout
@@ -307,16 +307,16 @@ function loadMedia(url, type) {
                 clearTimeout(timeout);
                 resolve(img);
             };
-            
+
             img.onerror = () => {
                 clearTimeout(timeout);
                 reject(new Error('Image load failed'));
             };
-            
+
             img.src = url;
         } else if (type === 'video') {
             const video = document.createElement('video');
-            
+
             const timeout = setTimeout(() => {
                 reject(new Error('Video load timeout'));
             }, 15000); // 15 second timeout for videos
@@ -325,12 +325,12 @@ function loadMedia(url, type) {
                 clearTimeout(timeout);
                 resolve(video);
             });
-            
+
             video.addEventListener('error', () => {
                 clearTimeout(timeout);
                 reject(new Error('Video load failed'));
             });
-            
+
             video.src = url;
             video.preload = 'metadata'; // Only load metadata initially
         }
@@ -343,10 +343,10 @@ const imageObserver = new IntersectionObserver((entries) => {
         if (entry.isIntersecting) {
             const img = entry.target;
             const fullUrl = img.dataset.fullUrl;
-            
+
             if (fullUrl && !img.dataset.loading) {
                 img.dataset.loading = 'true';
-                
+
                 preloadImage(fullUrl, 'high').then((fullImg) => {
                     img.style.opacity = '0';
                     setTimeout(() => {
@@ -380,7 +380,7 @@ function createOptimizedVideoElement(mediaData, thumbImg, playBtn, mediaWrapper)
             video.muted = true;
             video.playsInline = true;
             video.style.display = 'none';
-            
+
             video.addEventListener('canplay', () => {
                 videoLoaded = true;
                 // Only play if still hovering and video should be visible
@@ -403,7 +403,7 @@ function createOptimizedVideoElement(mediaData, thumbImg, playBtn, mediaWrapper)
             thumbImg.style.display = 'none';
             playBtn.style.display = 'none';
             video.style.display = 'block';
-            video.play().catch(() => {});
+            video.play().catch(() => { });
         }
     };
 
@@ -420,11 +420,11 @@ function createOptimizedVideoElement(mediaData, thumbImg, playBtn, mediaWrapper)
     mediaWrapper.addEventListener('mouseenter', () => {
         isHovering = true;
         clearTimeout(hoverTimeout);
-        
+
         hoverTimeout = setTimeout(() => {
             if (isHovering) { // Double-check still hovering
                 const vid = createVideo();
-                
+
                 if (videoLoaded) {
                     // Video already loaded, show immediately
                     showVideo();
@@ -447,27 +447,27 @@ function createOptimizedVideoElement(mediaData, thumbImg, playBtn, mediaWrapper)
     // Click handler - permanent video with controls
     mediaWrapper.addEventListener('click', (e) => {
         if (!video || video.controls) return; // Already clicked or no video
-        
+
         e.preventDefault();
         const vid = createVideo();
-        
+
         // Set up for permanent display
         vid.muted = false;
         vid.controls = true;
         vid.style.display = 'block';
         thumbImg.style.display = 'none';
         playBtn.style.display = 'none';
-        
+
         if (!vid.src) {
             vid.src = mediaData.url;
         }
-        
+
         // Play when ready
         if (videoLoaded) {
-            vid.play().catch(() => {});
+            vid.play().catch(() => { });
         } else {
             vid.addEventListener('canplay', () => {
-                vid.play().catch(() => {});
+                vid.play().catch(() => { });
             }, { once: true });
         }
     });
@@ -500,7 +500,7 @@ function createOptimizedMediaElement(mediaData) {
         img.loading = 'lazy';
         img.className = "fcm_media_img";
         img.dataset.fullUrl = mediaData.url;
-        
+
         // Use Intersection Observer for lazy loading
         imageObserver.observe(img);
         mediaWrapper.appendChild(img);
@@ -530,13 +530,13 @@ function cleanupPreloading() {
     });
     loadQueue = [];
     activeLoads = 0;
-    
+
     // this is handles with refresh
     // // Clear cache periodically to prevent memory leaks
     // if (preloadCache.size > 100) {
     //     preloadCache.clear();
     // }
-    
+
     // Disconnect observer
     imageObserver.disconnect();
 }
@@ -545,7 +545,7 @@ function initUI() {
     const button = document.createElement('span');
     button.title = "Masonry Grid";
 
-    button.addEventListener('click', function (e) {
+    button.addEventListener('click', function(e) {
         e.preventDefault();
         openGrid();
     });
@@ -736,12 +736,12 @@ function createMasonryGrid(mediaLinks) {
 
     let lastScroll = 0;
     overlay.addEventListener("scroll", () => {
-      const currentScroll = overlay.scrollTop;
+        const currentScroll = overlay.scrollTop;
 
-      if (currentScroll > lastScroll) { topbar.style.transform = "translateY(-100%)"; }
-      else { topbar.style.transform = "translateY(0)"; }
+        if (currentScroll > lastScroll) { topbar.style.transform = "translateY(-100%)"; }
+        else { topbar.style.transform = "translateY(0)"; }
 
-      lastScroll = currentScroll;
+        lastScroll = currentScroll;
     });
 
     overlay.appendChild(topbar);
@@ -752,7 +752,7 @@ function createMasonryGrid(mediaLinks) {
     const handleParentClick = (event) => {
         event.preventDefault();
         if (event.target === event.currentTarget) {
-          closeGrid();
+            closeGrid();
         }
     };
 
@@ -799,9 +799,9 @@ function openGrid() {
 
 function closeGrid() {
     if (!isGridOpen || !gridOverlay) return;
-    
+
     cleanupPreloading();
-    
+
     document.body.removeChild(gridOverlay);
     gridOverlay = null;
     isGridOpen = false;
