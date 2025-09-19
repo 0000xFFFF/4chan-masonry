@@ -222,6 +222,309 @@ let gridRows = 12;
 let isGridOpen = false;
 let gridOverlay = null;
 
+const CONCURRENT_LOADS = 3; // Maximum concurrent downloads
+const LOAD_DELAY = 200; // Delay between batches (ms)
+const PRELOAD_VIEWPORT_BUFFER = 200; // Load images within 200px of viewport
+
+let loadQueue = [];
+let activeLoads = 0;
+let preloadCache = new Map(); // Cache to avoid duplicate requests
+
+// Rate limiting function
+function delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// Check if element is near viewport
+function isNearViewport(element, buffer = PRELOAD_VIEWPORT_BUFFER) {
+    const rect = element.getBoundingClientRect();
+    const windowHeight = window.innerHeight;
+    const windowWidth = window.innerWidth;
+    
+    return (
+        rect.bottom >= -buffer &&
+        rect.top <= windowHeight + buffer &&
+        rect.right >= -buffer &&
+        rect.left <= windowWidth + buffer
+    );
+}
+
+// Queue-based image preloader
+async function preloadImage(url, priority = 'low') {
+    if (preloadCache.has(url)) {
+        return preloadCache.get(url);
+    }
+
+    return new Promise((resolve, reject) => {
+        loadQueue.push({ url, resolve, reject, priority, type: 'image' });
+        processLoadQueue();
+    });
+}
+
+// Process the load queue with rate limiting
+async function processLoadQueue() {
+    if (activeLoads >= CONCURRENT_LOADS || loadQueue.length === 0) {
+        return;
+    }
+
+    // Sort by priority (high priority first)
+    loadQueue.sort((a, b) => {
+        const priorityOrder = { 'high': 3, 'medium': 2, 'low': 1 };
+        return priorityOrder[b.priority] - priorityOrder[a.priority];
+    });
+
+    const item = loadQueue.shift();
+    activeLoads++;
+
+    try {
+        await delay(LOAD_DELAY); // Rate limiting delay
+
+        const result = await loadMedia(item.url, item.type);
+        preloadCache.set(item.url, result);
+        item.resolve(result);
+    } catch (error) {
+        console.warn(`Failed to load ${item.url}:`, error);
+        item.reject(error);
+    } finally {
+        activeLoads--;
+        // Process next item in queue
+        setTimeout(processLoadQueue, 50);
+    }
+}
+
+// Actual media loading function
+function loadMedia(url, type) {
+    return new Promise((resolve, reject) => {
+        if (type === 'image') {
+            const img = new Image();
+            
+            const timeout = setTimeout(() => {
+                reject(new Error('Image load timeout'));
+            }, 10000); // 10 second timeout
+
+            img.onload = () => {
+                clearTimeout(timeout);
+                resolve(img);
+            };
+            
+            img.onerror = () => {
+                clearTimeout(timeout);
+                reject(new Error('Image load failed'));
+            };
+            
+            img.src = url;
+        } else if (type === 'video') {
+            const video = document.createElement('video');
+            
+            const timeout = setTimeout(() => {
+                reject(new Error('Video load timeout'));
+            }, 15000); // 15 second timeout for videos
+
+            video.addEventListener('canplay', () => {
+                clearTimeout(timeout);
+                resolve(video);
+            });
+            
+            video.addEventListener('error', () => {
+                clearTimeout(timeout);
+                reject(new Error('Video load failed'));
+            });
+            
+            video.src = url;
+            video.preload = 'metadata'; // Only load metadata initially
+        }
+    });
+}
+
+// Intersection Observer for lazy loading
+const imageObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+        if (entry.isIntersecting) {
+            const img = entry.target;
+            const fullUrl = img.dataset.fullUrl;
+            
+            if (fullUrl && !img.dataset.loading) {
+                img.dataset.loading = 'true';
+                
+                preloadImage(fullUrl, 'high').then((fullImg) => {
+                    img.style.opacity = '0';
+                    setTimeout(() => {
+                        img.src = fullImg.src;
+                        img.style.opacity = '1';
+                        img.removeAttribute('data-full-url');
+                        img.removeAttribute('data-loading');
+                    }, 200);
+                }).catch(() => {
+                    img.removeAttribute('data-loading');
+                });
+            }
+        }
+    });
+}, {
+    rootMargin: '200px' // Start loading 200px before entering viewport
+});
+
+// Modified video preloading with better control
+function createOptimizedVideoElement(mediaData, thumbImg, playBtn, mediaWrapper) {
+    let video = null;
+    let videoLoaded = false;
+    let hoverTimeout = null;
+    let preloadPromise = null;
+
+    // Pre-create video element but don't load yet
+    const createVideo = () => {
+        if (!video) {
+            video = document.createElement('video');
+            video.className = "fcm_media_video";
+            video.loop = true;
+            video.muted = true;
+            video.playsInline = true;
+            video.preload = 'none'; // Don't preload until needed
+            
+            video.addEventListener('canplay', () => {
+                videoLoaded = true;
+                if (video.style.display === 'block') {
+                    video.play().catch(() => {});
+                }
+            });
+
+            mediaWrapper.appendChild(video);
+        }
+        return video;
+    };
+
+    // Optimized hover handler
+    mediaWrapper.addEventListener('mouseenter', () => {
+        clearTimeout(hoverTimeout);
+        hoverTimeout = setTimeout(() => {
+            const vid = createVideo();
+            
+            // Only start loading if not already loaded or loading
+            if (!videoLoaded && !preloadPromise) {
+                preloadPromise = new Promise((resolve) => {
+                    vid.addEventListener('loadedmetadata', resolve, { once: true });
+                    vid.src = mediaData.url;
+                });
+                
+                preloadPromise.then(() => {
+                    if (vid.style.display === 'block') {
+                        thumbImg.style.display = 'none';
+                        playBtn.style.display = 'none';
+                        vid.play().catch(() => {});
+                    }
+                });
+            }
+            
+            if (videoLoaded) {
+                thumbImg.style.display = 'none';
+                playBtn.style.display = 'none';
+                vid.style.display = 'block';
+                vid.play().catch(() => {});
+            } else {
+                vid.style.display = 'block';
+            }
+        }, 300); // Increased delay to avoid accidental loads
+    });
+
+    // Hover out handler
+    mediaWrapper.addEventListener('mouseleave', () => {
+        clearTimeout(hoverTimeout);
+        if (video && !video.controls) {
+            video.pause();
+            video.style.display = 'none';
+            thumbImg.style.display = 'block';
+            playBtn.style.display = 'flex';
+        }
+    });
+
+    // Click handler
+    mediaWrapper.addEventListener('click', (e) => {
+        const vid = createVideo();
+        if (!vid.controls) {
+            e.preventDefault();
+            vid.muted = false;
+            vid.controls = true;
+            vid.autoplay = true;
+            vid.style.display = 'block';
+            thumbImg.style.display = 'none';
+            playBtn.style.display = 'none';
+            
+            if (!preloadPromise) {
+                vid.src = mediaData.url;
+            }
+            vid.play().catch(() => {});
+        }
+    });
+}
+
+// Replace the image creation part in createMasonryGrid function
+function createOptimizedMediaElement(mediaData) {
+    const mediaWrapper = document.createElement('div');
+    mediaWrapper.className = "fcm_media_wrapper";
+
+    if (mediaData.isVideo) {
+        // Thumbnail image
+        const thumbImg = document.createElement('img');
+        thumbImg.src = mediaData.thumbnail;
+        thumbImg.className = "fcm_media_thumb";
+        thumbImg.loading = 'lazy';
+        mediaWrapper.appendChild(thumbImg);
+
+        // Play button overlay
+        const playBtn = document.createElement('div');
+        playBtn.className = "fcm_play_btn";
+        playBtn.innerHTML = '&#9658;';
+        mediaWrapper.appendChild(playBtn);
+
+        // Use optimized video creation
+        createOptimizedVideoElement(mediaData, thumbImg, playBtn, mediaWrapper);
+    } else {
+        const img = document.createElement('img');
+        img.src = mediaData.thumbnail;
+        img.loading = 'lazy';
+        img.className = "fcm_media_img";
+        img.dataset.fullUrl = mediaData.url;
+        
+        // Use Intersection Observer for lazy loading
+        imageObserver.observe(img);
+        mediaWrapper.appendChild(img);
+    }
+
+    // Filename tooltip
+    const tooltip = document.createElement('div');
+    tooltip.textContent = mediaData.originalName;
+    tooltip.className = "fcm_tooltip";
+
+    // Middle click handler
+    mediaWrapper.addEventListener('mousedown', (event) => {
+        if (event.button === 1) {
+            window.open(mediaData.url, '_blank');
+        }
+    });
+
+    mediaWrapper.appendChild(tooltip);
+    return mediaWrapper;
+}
+
+// Add cleanup function for when grid is closed
+function cleanupPreloading() {
+    // Cancel pending loads
+    loadQueue.forEach(item => {
+        item.reject(new Error('Cleanup cancelled'));
+    });
+    loadQueue = [];
+    activeLoads = 0;
+    
+    // Clear cache periodically to prevent memory leaks
+    if (preloadCache.size > 100) {
+        preloadCache.clear();
+    }
+    
+    // Disconnect observer
+    imageObserver.disconnect();
+}
+
+
 function initUI() {
     const button = document.createElement('span');
     button.title = "Masonry Grid";
@@ -448,113 +751,7 @@ function createMasonryGrid(mediaLinks) {
 
     // Create image elements
     mediaLinks.forEach((mediaData, index) => {
-        const mediaWrapper = document.createElement('div');
-        mediaWrapper.className = "fcm_media_wrapper";
-
-        if (mediaData.isVideo) {
-            // Thumbnail image
-            const thumbImg = document.createElement('img');
-            thumbImg.src = mediaData.thumbnail;
-            thumbImg.className = "fcm_media_thumb";
-            mediaWrapper.appendChild(thumbImg);
-
-            // Play button overlay
-            const playBtn = document.createElement('div');
-            playBtn.className = "fcm_play_btn";
-            playBtn.innerHTML = '&#9658;';
-            mediaWrapper.appendChild(playBtn);
-
-            let video = null;
-            let hoverTimeout = null;
-            let videoLoaded = false;
-
-            // Hover in → wait 100ms → load and play muted video
-            mediaWrapper.addEventListener('mouseenter', () => {
-                hoverTimeout = setTimeout(() => {
-                    if (!video) {
-                        video = document.createElement('video');
-                        video.src = mediaData.url;
-                        video.className = "fcm_media_video";
-                        video.loop = true;
-                        video.muted = true;
-                        video.playsInline = true;
-
-                        video.addEventListener('canplay', () => {
-                            videoLoaded = true;
-                            thumbImg.style.display = 'none';
-                            playBtn.style.display = 'none';
-                            video.style.display = 'block';
-                            video.play().catch(() => {});
-                        });
-
-                        mediaWrapper.appendChild(video);
-                    } else if (videoLoaded) {
-                        thumbImg.style.display = 'none';
-                        playBtn.style.display = 'none';
-                        video.style.display = 'block';
-                        video.play().catch(() => {});
-                    }
-                }, 100);
-            });
-
-            // Hover out → only reset if not clicked
-            mediaWrapper.addEventListener('mouseleave', () => {
-                clearTimeout(hoverTimeout);
-                if (video) {
-                    video.pause();
-                    video.style.display = 'none';
-                    thumbImg.style.display = 'block';
-                    playBtn.style.display = 'flex';
-                }
-            });
-
-            // Click → unmute, controls on, persistent
-            mediaWrapper.addEventListener('click', (e) => {
-                if (video && !video.controls) {
-                    e.preventDefault();
-                    video.muted = false;
-                    video.controls = true;
-                    video.autoplay = true;
-                    thumbImg.style.display = 'none';
-                    playBtn.style.display = 'none';
-                    video.style.display = 'block';
-                    video.play().catch(() => {});
-                }
-            });
-        }
-        else {
-            const img = document.createElement('img');
-            img.src = mediaData.thumbnail;
-            img.loading = 'lazy';
-            img.className = "fcm_media_img";
-            mediaWrapper.appendChild(img);
-
-            // Preload full image in background
-            const fullImg = new Image();
-            fullImg.src = mediaData.url;
-            fullImg.onload = () => {
-                img.style.opacity = '0'; // fade out thumbnail
-                setTimeout(() => {
-                    img.src = fullImg.src; // replace with full image
-                    img.style.opacity = '1'; // fade in full image
-                }, 200); // delay so fade-out is visible
-            };
-        }
-
-        // Filename tooltip
-        const tooltip = document.createElement('div');
-        tooltip.textContent = mediaData.originalName;
-        tooltip.className = "fcm_tooltip";
-
-        // Click middle click to open full size
-        mediaWrapper.addEventListener('mousedown', (event) => {
-            if (event.button === 1) {
-                // 0 = left, 1 = middle, 2 = right
-                window.open(mediaData.url, '_blank');
-            }
-        });
-
-        mediaWrapper.appendChild(tooltip);
+        const mediaWrapper = createOptimizedMediaElement(mediaData);
         gridContainer.appendChild(mediaWrapper);
     });
 
@@ -586,17 +783,16 @@ function openGrid() {
 
 function closeGrid() {
     if (!isGridOpen || !gridOverlay) return;
-
+    
+    cleanupPreloading();
+    
     document.body.removeChild(gridOverlay);
     gridOverlay = null;
     isGridOpen = false;
-
-    // Restore body scrolling
     document.body.style.overflow = 'auto';
-
-    // Remove escape key listener
     document.removeEventListener('keydown', handleEscapeKey);
 }
+
 
 function handleEscapeKey(e) {
     if (e.key === 'Escape') {
