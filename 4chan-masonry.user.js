@@ -88,7 +88,6 @@ var MasonryCss = `
     margin: 0 0 0 5px;
     padding: 0;
     cursor: pointer;
-    display: flex;
     justify-content: center;
 }
 
