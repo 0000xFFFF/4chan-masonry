@@ -1,13 +1,15 @@
 // ==UserScript==
 // @name         4chan-masonry
 // @namespace    0000xFFFF
-// @version      1.0.0
-// @description  View all images from 4chan thread in a masonry grid layout.
+// @version      1.0.1
+// @description  View all media (images+videos) from a 4chan thread in a masonry grid layout.
 // @author       0000xFFFF
 // @match        *://boards.4chan.org/*/thread/*
 // @match        *://boards.4channel.org/*/thread/*
 // @grant        GM_addStyle
 // @icon         data:image/ico;base64,AAABAAEAEBAAAAEAIADMAAAAFgAAAIlQTkcNChoKAAAADUlIRFIAAAAQAAAAEAgGAAAAH/P/YQAAAJNJREFUeJxjYBhM4D8SJlnN/7QzxnCsFSyKFSOrwWpI9DZdsEI0m+AYJAdSg6EZ2RY0TV9grkM2BEktQjMuW2EY2RBkgxjwaUbzL7ohr+AGIBsCVfQHmwFYXQAEbDgMwRuYUPVsGAEpqMSB0xCMAESPRlyxgSyONRphBuBLSElHDfEmIrgBaM4nRg7VEDSaWDnyAQA+Ad0pEUxcvAAAAABJRU5ErkJggg==
+// @downloadURL  https://github.com/0000xFFFF/4chan-masonry/raw/refs/heads/master/4chan-masonry.user.js
+// @updateURL    https://github.com/0000xFFFF/4chan-masonry/raw/refs/heads/master/4chan-masonry.user.js
 // ==/UserScript==
 
 function GM_addStyle(css) {
