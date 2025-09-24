@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         4chan-masonry
 // @namespace    0000xFFFF
-// @version      1.3.0
+// @version      1.3.1
 // @description  View all media (images+videos) from a 4chan thread in a masonry grid layout.
 // @author       0000xFFFF
 // @match        *://boards.4chan.org/*/thread/*
@@ -11,6 +11,15 @@
 // @downloadURL  https://github.com/0000xFFFF/4chan-masonry/raw/refs/heads/master/4chan-masonry.user.js
 // @updateURL    https://github.com/0000xFFFF/4chan-masonry/raw/refs/heads/master/4chan-masonry.user.js
 // ==/UserScript==
+
+const GRID_ROWS_MIN = 1;
+const GRID_ROWS_MAX = 15;
+const GRID_ROWS_DEFAULT = 4;
+const CONCURRENT_LOADS_IMAGE = 3;
+const CONCURRENT_LOADS_VIDEO = 1;
+const LOAD_DELAY_IMAGE = 10;
+const LOAD_DELAY_VIDEO = 1000;
+const PRELOAD_VIEWPORT_BUFFER = 200; // Load images within 200px of viewport
 
 function GM_addStyle(css) {
     const style = document.createElement("style");
@@ -218,18 +227,10 @@ const userscript_icon_1 = "data:image/ico;base64,AAABAAEAEBAAAAEAIACFAAAAFgAAAIl
 const userscript_icon_2 = "data:image/ico;base64,AAABAAEAEBAAAAEAIACaAAAAFgAAAIlQTkcNChoKAAAADUlIRFIAAAAQAAAAEAgGAAAAH/P/YQAAAGFJREFUeJxjYICA/0iYEMBQ+z/tjDEcEzAEp1piDCFOM7EGYBiCxW/EihH2KxFhg10zzCZSDMHQTKohFBtAkRdQQhtPIGI1CJ9CrAYjG0JxUqaOAcg0IQOwqf2PRuMDKGoBmcLsrWcgpCUAAAAASUVORK5CYII=";
 const userscript_icon_3 = "data:image/ico;base64,AAABAAEACggAAAEAIABkAAAAFgAAAIlQTkcNChoKAAAADUlIRFIAAAAKAAAACAgGAAAAwPputgAAACtJREFUeJxjYEAF/9EwVvA/7YwxCsamGF0Sq2IMRbgUE62QaKtJ8gzB4AEA82hZQXIdFlEAAAAASUVORK5CYII="
 
-const gridRowsMin = 1;
-const gridRowsMax = 15;
-let gridRows = 4;
+
+let gridRows = GRID_ROWS_DEFAULT;
 let isGridOpen = false;
 let gridOverlay = null;
-
-const CONCURRENT_LOADS_IMAGE = 3;
-const CONCURRENT_LOADS_VIDEO = 1;
-const LOAD_DELAY_IMAGE = 10;
-const LOAD_DELAY_VIDEO = 1000;
-const PRELOAD_VIEWPORT_BUFFER = 200; // Load images within 200px of viewport
-
 let loadQueue = [];
 let activeLoadsImage = 0;
 let activeLoadsVideo = 0;
@@ -801,8 +802,8 @@ function createTopBar() {
     const slider = document.createElement('input');
     slider.type = 'range';
     slider.id = "setting_slider_cols";
-    slider.min = gridRowsMin;
-    slider.max = gridRowsMax;
+    slider.min = GRID_ROWS_MIN;
+    slider.max = GRID_ROWS_MAX;
     slider.step = "1";
     slider.value = gridRows;
 
