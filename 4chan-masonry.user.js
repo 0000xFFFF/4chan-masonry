@@ -18,7 +18,7 @@ const GRID_ROWS_DEFAULT = 4;
 const CONCURRENT_LOADS_IMAGE = 3;
 const CONCURRENT_LOADS_VIDEO = 1;
 const LOAD_DELAY_IMAGE = 10;
-const LOAD_DELAY_VIDEO = 1000;
+const LOAD_DELAY_VIDEO = 300;
 const PRELOAD_VIEWPORT_BUFFER = 200; // Load images within 200px of viewport
 
 function GM_addStyle(css) {
