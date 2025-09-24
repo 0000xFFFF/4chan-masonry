@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         4chan-masonry
 // @namespace    0000xFFFF
-// @version      1.1.0
+// @version      1.2.0
 // @description  View all media (images+videos) from a 4chan thread in a masonry grid layout.
 // @author       0000xFFFF
 // @match        *://boards.4chan.org/*/thread/*
@@ -225,8 +225,9 @@ let isGridOpen = false;
 let gridOverlay = null;
 
 // Add these variables at the top level
-const CONCURRENT_LOADS = 1; // Maximum concurrent downloads
-const LOAD_DELAY = 200; // Delay between batches (ms)
+const CONCURRENT_LOADS = 3; // Maximum concurrent downloads
+const LOAD_DELAY_IMAGE = 10;
+const LOAD_DELAY_VIDEO = 2000;
 const PRELOAD_VIEWPORT_BUFFER = 200; // Load images within 200px of viewport
 
 let loadQueue = [];
@@ -264,6 +265,13 @@ async function preloadMedia(url, priority = 'low', type = 'image') {
     });
 }
 
+function updateQueuePriority(url, newPriority) {
+    const item = loadQueue.find(i => i.url === url);
+    if (item) {
+        item.priority = newPriority;
+    }
+}
+
 // Process the load queue with rate limiting
 async function processLoadQueue() {
     if (activeLoads >= CONCURRENT_LOADS || loadQueue.length === 0) {
@@ -280,7 +288,7 @@ async function processLoadQueue() {
     activeLoads++;
 
     try {
-        await delay(LOAD_DELAY); // Rate limiting delay
+        await delay(item.type === 'image' ? LOAD_DELAY_IMAGE : LOAD_DELAY_VIDEO); // Rate limiting delay
 
         const result = await loadMedia(item.url, item.type);
         preloadCache.set(item.url, result);
@@ -294,6 +302,46 @@ async function processLoadQueue() {
         setTimeout(processLoadQueue, 50);
     }
 }
+
+function updatePriorities() {
+    document.querySelectorAll('.fcm_media_img').forEach(img => {
+        const url = img.dataset.fullUrl;
+
+        if (!url) return; // Already loaded
+        if (preloadCache.has(url)) return; // Already done
+
+        // If already queued, just bump priority
+        if (loadQueue.some(i => i.url === url)) {
+            if (isNearViewport(img)) {
+                updateQueuePriority(url, 'high');
+            }
+        }
+    });
+}
+
+function throttle(fn, delay) {
+    let lastCall = 0;
+    let timeout;
+
+    return function (...args) {
+        const now = Date.now();
+
+        if (now - lastCall < delay) {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => {
+                lastCall = Date.now();
+                fn.apply(this, args);
+            }, delay - (now - lastCall));
+        } else {
+            lastCall = now;
+            fn.apply(this, args);
+        }
+    };
+}
+
+const throttledUpdatePriorities = throttle(updatePriorities, 400);
+window.addEventListener('scroll', throttledUpdatePriorities);
+window.addEventListener('resize', throttledUpdatePriorities);
 
 // Actual media loading function
 function loadMedia(url, type) {
@@ -323,7 +371,7 @@ function loadMedia(url, type) {
                 reject(new Error('Video load timeout'));
             }, 15000); // 15 second timeout for videos
 
-            video.addEventListener('canplay', () => {
+            video.addEventListener('loadeddata', () => {
                 clearTimeout(timeout);
                 resolve(video);
             });
@@ -349,7 +397,7 @@ const imageObserver = new IntersectionObserver((entries) => {
             if (fullUrl && !img.dataset.loading) {
                 img.dataset.loading = 'true';
 
-                preloadMedia(fullUrl, 'high').then((fullImg) => {
+                preloadMedia(fullUrl, 'low').then((fullImg) => {
                     img.style.opacity = '0';
                     setTimeout(() => {
                         img.src = fullImg.src;
