@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         4chan-masonry
 // @namespace    0000xFFFF
-// @version      1.2.0
+// @version      1.2.1
 // @description  View all media (images+videos) from a 4chan thread in a masonry grid layout.
 // @author       0000xFFFF
 // @match        *://boards.4chan.org/*/thread/*
@@ -82,7 +82,7 @@ var MasonryCss = `
 #fcm_masonry {
     display: block;
     gap: 10px;
-    margin-top: 50px;
+    margin-top: 90px;
     column-gap: 5px;
 }
 
@@ -220,7 +220,7 @@ const userscript_icon_3 = "data:image/ico;base64,AAABAAEACggAAAEAIABkAAAAFgAAAIl
 
 const gridRowsMin = 1;
 const gridRowsMax = 15;
-let gridRows = 12;
+let gridRows = 4;
 let isGridOpen = false;
 let gridOverlay = null;
 
@@ -265,13 +265,6 @@ async function preloadMedia(url, priority = 'low', type = 'image') {
     });
 }
 
-function updateQueuePriority(url, newPriority) {
-    const item = loadQueue.find(i => i.url === url);
-    if (item) {
-        item.priority = newPriority;
-    }
-}
-
 // Process the load queue with rate limiting
 async function processLoadQueue() {
     if (activeLoads >= CONCURRENT_LOADS || loadQueue.length === 0) {
@@ -280,7 +273,7 @@ async function processLoadQueue() {
 
     // Sort by priority (high priority first)
     loadQueue.sort((a, b) => {
-        const priorityOrder = { 'high': 3, 'medium': 2, 'low': 1 };
+        const priorityOrder = { 'high': 2, 'low': 1 };
         return priorityOrder[b.priority] - priorityOrder[a.priority];
     });
 
@@ -310,11 +303,9 @@ function updatePriorities() {
         if (!url) return; // Already loaded
         if (preloadCache.has(url)) return; // Already done
 
-        // If already queued, just bump priority
-        if (loadQueue.some(i => i.url === url)) {
-            if (isNearViewport(img)) {
-                updateQueuePriority(url, 'high');
-            }
+        const item = loadQueue.find(i => i.url === url);
+        if (item) {
+            item.priority = isNearViewport(img) ? 'high' : 'low';
         }
     });
 }
@@ -339,7 +330,7 @@ function throttle(fn, delay) {
     };
 }
 
-const throttledUpdatePriorities = throttle(updatePriorities, 400);
+const throttledUpdatePriorities = throttle(updatePriorities, 800);
 window.addEventListener('scroll', throttledUpdatePriorities);
 window.addEventListener('resize', throttledUpdatePriorities);
 
@@ -397,7 +388,7 @@ const imageObserver = new IntersectionObserver((entries) => {
             if (fullUrl && !img.dataset.loading) {
                 img.dataset.loading = 'true';
 
-                preloadMedia(fullUrl, 'low').then((fullImg) => {
+                preloadMedia(fullUrl, isNearViewport(img) ? 'high' : 'low').then((fullImg) => {
                     img.style.opacity = '0';
                     setTimeout(() => {
                         img.src = fullImg.src;
@@ -932,3 +923,4 @@ async function init() {
 }
 
 init();
+
