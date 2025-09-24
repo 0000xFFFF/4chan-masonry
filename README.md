@@ -18,4 +18,4 @@ If you have [4chan-x](https://github.com/ccd0/4chan-x), button gets added in the
 ### Notes:
 * Images are fetched with a processing queue. (thumbs => og images)
 * To load videos simply hover on them. Don't hover too much to avoid getting 429-ed.
-* The script still needs a little fine tuning that will avoid 4chan's rate limiter. (expect changes)
+* The script still needs a little fine tuning that will avoid 4chan's rate limiter for videos. (expect changes)
