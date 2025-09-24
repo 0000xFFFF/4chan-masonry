@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         4chan-masonry
 // @namespace    0000xFFFF
-// @version      1.3.1
+// @version      1.3.2
 // @description  View all media (images+videos) from a 4chan thread in a masonry grid layout.
 // @author       0000xFFFF
 // @match        *://boards.4chan.org/*/thread/*
@@ -155,7 +155,8 @@ var MasonryCss = `
     overflow: hidden;
     border-radius: 8px;
     cursor: pointer;
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    transition: transform 0.1s ease, box-shadow 0.1s ease;
+    background-color: #005F00;
 }
 
 .fcm_media_wrapper:hover {
@@ -171,6 +172,10 @@ var MasonryCss = `
     display: block;
     object-fit: cover;
     cursor: pointer;
+}
+
+.fcm_media_loading, .fcm_media_thumb {
+
 }
 
 .fcm_media_img {
@@ -419,9 +424,11 @@ const imageObserver = new IntersectionObserver((entries) => {
                         img.style.opacity = '1';
                         img.removeAttribute('data-full-url');
                         img.removeAttribute('data-loading');
+                        img.classList.remove("fcm_media_loading");
                     }, 200);
                 }).catch(() => {
                     img.removeAttribute('data-loading');
+                    img.classList.remove("fcm_media_loading");
                 });
             }
         }
@@ -566,9 +573,9 @@ function createOptimizedMediaElement(mediaData) {
         createOptimizedVideoElement(mediaData, thumbImg, playBtn, mediaWrapper);
     } else {
         const img = document.createElement('img');
+        img.className = "fcm_media_img fcm_media_loading";
         img.src = mediaData.thumbnail;
         img.loading = 'lazy';
-        img.className = "fcm_media_img";
         img.dataset.fullUrl = mediaData.url;
 
         mediaWrapper.addEventListener('mouseenter', () => {
