@@ -1,13 +1,13 @@
 // ==UserScript==
 // @name         4chan-masonry
 // @namespace    0000xFFFF
-// @version      1.0.1
+// @version      1.1.0
 // @description  View all media (images+videos) from a 4chan thread in a masonry grid layout.
 // @author       0000xFFFF
 // @match        *://boards.4chan.org/*/thread/*
 // @match        *://boards.4channel.org/*/thread/*
 // @grant        GM_addStyle
-// @icon         data:image/ico;base64,AAABAAEAEBAAAAEAIADMAAAAFgAAAIlQTkcNChoKAAAADUlIRFIAAAAQAAAAEAgGAAAAH/P/YQAAAJNJREFUeJxjYBhM4D8SJlnN/7QzxnCsFSyKFSOrwWpI9DZdsEI0m+AYJAdSg6EZ2RY0TV9grkM2BEktQjMuW2EY2RBkgxjwaUbzL7ohr+AGIBsCVfQHmwFYXQAEbDgMwRuYUPVsGAEpqMSB0xCMAESPRlyxgSyONRphBuBLSElHDfEmIrgBaM4nRg7VEDSaWDnyAQA+Ad0pEUxcvAAAAABJRU5ErkJggg==
+// @icon         data:image/ico;base64,AAABAAEAEBAAAAEAIACaAAAAFgAAAIlQTkcNChoKAAAADUlIRFIAAAAQAAAAEAgGAAAAH/P/YQAAAGFJREFUeJxjYICA/0iYEMBQ+z/tjDEcEzAEp1piDCFOM7EGYBiCxW/EihH2KxFhg10zzCZSDMHQTKohFBtAkRdQQhtPIGI1CJ9CrAYjG0JxUqaOAcg0IQOwqf2PRuMDKGoBmcLsrWcgpCUAAAAASUVORK5CYII=
 // @downloadURL  https://github.com/0000xFFFF/4chan-masonry/raw/refs/heads/master/4chan-masonry.user.js
 // @updateURL    https://github.com/0000xFFFF/4chan-masonry/raw/refs/heads/master/4chan-masonry.user.js
 // ==/UserScript==
@@ -214,8 +214,9 @@ var MasonryCss = `
 
 GM_addStyle(MasonryCss);
 
-
-const userscript_icon = "data:image/ico;base64,AAABAAEAEA0AAAEAIADLAAAAFgAAAIlQTkcNChoKAAAADUlIRFIAAAAQAAAADQgGAAAAoLvuJAAAAJJJREFUeJxjYECA/0gYF8Cp5n/aGWM41goWxYqR1WA1JHqbLlghmk1wDJIDqcHQjGwLmqYvMNchG4KkFqEZl60wjGwIskEM+DSj+RfdkFdwA5ANgSr6g80ArC4AAjYchuANTKh6NoyAFFTiwGkIRgCiRyOu2EAWxxqNMAPwJaSko4Z4ExHcADTnEyOHaggaTVAOABLO3SkZ/WViAAAAAElFTkSuQmCC";
+const userscript_icon_1 = "data:image/ico;base64,AAABAAEAEBAAAAEAIACFAAAAFgAAAIlQTkcNChoKAAAADUlIRFIAAAAQAAAAEAgGAAAAH/P/YQAAAExJREFUeJxjYBhM4D8SJlnN/7QzxnCMwxCCavApIE0zIQNwGoLFj9jYhMIJ01ZiNVDNAEJeIMtWolxDUTRSzwBkmkg5VEPQaGLlyAcAWwCk9UAWSQAAAAAASUVORK5CYII="
+const userscript_icon_2 = "data:image/ico;base64,AAABAAEAEBAAAAEAIACaAAAAFgAAAIlQTkcNChoKAAAADUlIRFIAAAAQAAAAEAgGAAAAH/P/YQAAAGFJREFUeJxjYICA/0iYEMBQ+z/tjDEcEzAEp1piDCFOM7EGYBiCxW/EihH2KxFhg10zzCZSDMHQTKohFBtAkRdQQhtPIGI1CJ9CrAYjG0JxUqaOAcg0IQOwqf2PRuMDKGoBmcLsrWcgpCUAAAAASUVORK5CYII=";
+const userscript_icon_3 = "data:image/ico;base64,AAABAAEACggAAAEAIABkAAAAFgAAAIlQTkcNChoKAAAADUlIRFIAAAAKAAAACAgGAAAAwPputgAAACtJREFUeJxjYEAF/9EwVvA/7YwxCsamGF0Sq2IMRbgUE62QaKtJ8gzB4AEA82hZQXIdFlEAAAAASUVORK5CYII="
 
 const gridRowsMin = 1;
 const gridRowsMax = 15;
@@ -224,7 +225,7 @@ let isGridOpen = false;
 let gridOverlay = null;
 
 // Add these variables at the top level
-const CONCURRENT_LOADS = 3; // Maximum concurrent downloads
+const CONCURRENT_LOADS = 1; // Maximum concurrent downloads
 const LOAD_DELAY = 200; // Delay between batches (ms)
 const PRELOAD_VIEWPORT_BUFFER = 200; // Load images within 200px of viewport
 
@@ -566,8 +567,50 @@ function initUI() {
         button.className = "shortcut brackets-wrap fcm_shortcut_4chanx";
 
         const img = document.createElement("img");
-        img.src = userscript_icon;
+        img.src = userscript_icon_1;
         button.appendChild(img);
+
+
+        img.addEventListener('mouseover', () => {
+            if (!img.classList.contains('clicked')) {
+                img.src = userscript_icon_2;
+            }
+        });
+
+
+        img.addEventListener('mouseout', () => {
+            if (!img.classList.contains('clicked')) {
+                img.src = userscript_icon_1;
+            }
+        });
+
+        img.addEventListener('mousedown', () => {
+            img.classList.add('pressed');
+            img.src = userscript_icon_3;
+        });
+
+
+        img.addEventListener('mouseup', () => {
+            img.classList.remove('pressed');
+
+            if (img.matches(':hover')) {
+                img.src = userscript_icon_2;
+            } else {
+                img.src = userscript_icon_1;
+            }
+        });
+
+        // also handle case where mouse is released outside the image
+        document.addEventListener('mouseup', () => {
+            if (img.classList.contains('pressed')) {
+                img.classList.remove('pressed');
+                if (img.matches(':hover')) {
+                    img.src = 'icon2.png';
+                } else {
+                    img.src = 'icon1.png';
+                }
+            }
+        });
 
         forchanX_header.appendChild(button);
         element.parentElement.insertBefore(button, element);
@@ -576,7 +619,7 @@ function initUI() {
         button.className = "fcm_button_regular";
 
         const img = document.createElement("img");
-        img.src = userscript_icon;
+        img.src = userscript_icon_3;
         button.appendChild(img);
 
         const span = document.createElement("span");
