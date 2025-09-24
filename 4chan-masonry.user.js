@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         4chan-masonry
 // @namespace    0000xFFFF
-// @version      1.2.1
+// @version      1.3.0
 // @description  View all media (images+videos) from a 4chan thread in a masonry grid layout.
 // @author       0000xFFFF
 // @match        *://boards.4chan.org/*/thread/*
@@ -224,14 +224,15 @@ let gridRows = 4;
 let isGridOpen = false;
 let gridOverlay = null;
 
-// Add these variables at the top level
-const CONCURRENT_LOADS = 3; // Maximum concurrent downloads
+const CONCURRENT_LOADS_IMAGE = 3;
+const CONCURRENT_LOADS_VIDEO = 1;
 const LOAD_DELAY_IMAGE = 10;
-const LOAD_DELAY_VIDEO = 2000;
+const LOAD_DELAY_VIDEO = 1000;
 const PRELOAD_VIEWPORT_BUFFER = 200; // Load images within 200px of viewport
 
 let loadQueue = [];
-let activeLoads = 0;
+let activeLoadsImage = 0;
+let activeLoadsVideo = 0;
 let preloadCache = new Map(); // Cache to avoid duplicate requests
 
 // Rate limiting function
@@ -267,21 +268,30 @@ async function preloadMedia(url, priority = 'low', type = 'image') {
 
 // Process the load queue with rate limiting
 async function processLoadQueue() {
-    if (activeLoads >= CONCURRENT_LOADS || loadQueue.length === 0) {
+    if ((activeLoadsImage >= CONCURRENT_LOADS_IMAGE || activeLoadsVideo >= CONCURRENT_LOADS_VIDEO) || loadQueue.length === 0) {
         return;
     }
 
     // Sort by priority (high priority first)
     loadQueue.sort((a, b) => {
-        const priorityOrder = { 'high': 2, 'low': 1 };
+        const priorityOrder = { 'high': 3, 'medium': 2, 'low': 1 };
         return priorityOrder[b.priority] - priorityOrder[a.priority];
     });
 
     const item = loadQueue.shift();
-    activeLoads++;
+
+    let delayMs = 0;
+    if (item.type === 'image') {
+        activeLoadsImage++;
+        delayMs = LOAD_DELAY_IMAGE;
+    }
+    else {
+        activeLoadsVideo++;
+        delayMs = LOAD_DELAY_VIDEO;
+    }
 
     try {
-        await delay(item.type === 'image' ? LOAD_DELAY_IMAGE : LOAD_DELAY_VIDEO); // Rate limiting delay
+        await delay(delayMs); // Rate limiting delay
 
         const result = await loadMedia(item.url, item.type);
         preloadCache.set(item.url, result);
@@ -290,9 +300,22 @@ async function processLoadQueue() {
         console.warn(`Failed to load ${item.url}:`, error);
         item.reject(error);
     } finally {
-        activeLoads--;
+        if (item.type === 'image') {
+            activeLoadsImage--;
+        }
+        else {
+            activeLoadsVideo--;
+        }
+
         // Process next item in queue
         setTimeout(processLoadQueue, 50);
+    }
+}
+
+function updateQueuePriority(url, newPriority) {
+    const item = loadQueue.find(i => i.url === url);
+    if (item) {
+        item.priority = newPriority;
     }
 }
 
@@ -305,7 +328,7 @@ function updatePriorities() {
 
         const item = loadQueue.find(i => i.url === url);
         if (item) {
-            item.priority = isNearViewport(img) ? 'high' : 'low';
+            item.priority = isNearViewport(img) ? 'medium' : 'low';
         }
     });
 }
@@ -388,7 +411,7 @@ const imageObserver = new IntersectionObserver((entries) => {
             if (fullUrl && !img.dataset.loading) {
                 img.dataset.loading = 'true';
 
-                preloadMedia(fullUrl, isNearViewport(img) ? 'high' : 'low').then((fullImg) => {
+                preloadMedia(fullUrl, isNearViewport(img) ? 'medium' : 'low').then((fullImg) => {
                     img.style.opacity = '0';
                     setTimeout(() => {
                         img.src = fullImg.src;
@@ -412,7 +435,6 @@ function createOptimizedVideoElement(mediaData, thumbImg, playBtn, mediaWrapper)
     let hoverTimeout = null;
     let isHovering = false;
 
-    // Create and setup video element
     const createVideo = () => {
         if (!video) {
             video = document.createElement('video');
@@ -424,8 +446,7 @@ function createOptimizedVideoElement(mediaData, thumbImg, playBtn, mediaWrapper)
 
             video.addEventListener('canplay', () => {
                 videoLoaded = true;
-                // Only play if still hovering and video should be visible
-                if (isHovering && !video.controls) {
+                if (isNearViewport(video) && !video.controls) {
                     showVideo();
                 }
             });
@@ -485,12 +506,12 @@ function createOptimizedVideoElement(mediaData, thumbImg, playBtn, mediaWrapper)
         }, 100); // Reduced delay for better responsiveness
     });
 
-    // // Hover leave - hide video and cancel loading if needed
-    // mediaWrapper.addEventListener('mouseleave', () => {
-    //     isHovering = false;
-    //     clearTimeout(hoverTimeout);
-    //     hideVideo();
-    // });
+    // Hover leave - hide video and cancel loading if needed
+    mediaWrapper.addEventListener('mouseleave', () => {
+         isHovering = false;
+         clearTimeout(hoverTimeout);
+         //hideVideo();
+    });
 
     // Click handler - permanent video with controls
     mediaWrapper.addEventListener('click', (e) => {
@@ -548,6 +569,10 @@ function createOptimizedMediaElement(mediaData) {
         img.loading = 'lazy';
         img.className = "fcm_media_img";
         img.dataset.fullUrl = mediaData.url;
+
+        mediaWrapper.addEventListener('mouseenter', () => {
+            updateQueuePriority(mediaData.url, 'high');
+        });
 
         // Use Intersection Observer for lazy loading
         imageObserver.observe(img);
@@ -923,4 +948,3 @@ async function init() {
 }
 
 init();
-
