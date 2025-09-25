@@ -6,7 +6,7 @@ By default, button is added on top of the thread.
 
 <img src="preview/preview1.png">
 
-If you have [4chan-x](https://github.com/ccd0/4chan-x), button gets added in the shortcuts bar.
+If you have [4chan-x](https://github.com/ccd0/4chan-x) or [4chan-xt](https://github.com/TuxedoTako/4chan-xt), button gets added in the shortcuts bar.
 
 <img src="preview/preview3.png">
 
