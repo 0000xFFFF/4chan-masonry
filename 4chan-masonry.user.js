@@ -4,6 +4,7 @@
 // @version      1.3.3
 // @description  View all media (images+videos) from a 4chan thread in a masonry grid layout.
 // @author       0000xFFFF
+// @license      MIT
 // @match        *://boards.4chan.org/*/thread/*
 // @match        *://boards.4channel.org/*/thread/*
 // @grant        GM_addStyle
