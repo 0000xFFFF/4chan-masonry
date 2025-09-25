@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         4chan-masonry
 // @namespace    0000xFFFF
-// @version      1.3.2
+// @version      1.3.3
 // @description  View all media (images+videos) from a 4chan thread in a masonry grid layout.
 // @author       0000xFFFF
 // @match        *://boards.4chan.org/*/thread/*
@@ -156,7 +156,6 @@ var MasonryCss = `
     border-radius: 8px;
     cursor: pointer;
     transition: transform 0.1s ease, box-shadow 0.1s ease;
-    background-color: #005F00;
 }
 
 .fcm_media_wrapper:hover {
