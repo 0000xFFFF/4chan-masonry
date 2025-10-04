@@ -1,12 +1,13 @@
 // ==UserScript==
 // @name         4chan-masonry
 // @namespace    0000xFFFF
-// @version      1.3.3
+// @version      1.4
 // @description  View all media (images+videos) from a 4chan thread in a masonry grid layout.
 // @author       0000xFFFF
 // @license      MIT
 // @match        *://boards.4chan.org/*/thread/*
 // @match        *://boards.4channel.org/*/thread/*
+// @match        *://archive.4plebs.org/*/thread/*
 // @grant        GM_addStyle
 // @icon         data:image/ico;base64,AAABAAEAEBAAAAEAIACaAAAAFgAAAIlQTkcNChoKAAAADUlIRFIAAAAQAAAAEAgGAAAAH/P/YQAAAGFJREFUeJxjYICA/0iYEMBQ+z/tjDEcEzAEp1piDCFOM7EGYBiCxW/EihH2KxFhg10zzCZSDMHQTKohFBtAkRdQQhtPIGI1CJ9CrAYjG0JxUqaOAcg0IQOwqf2PRuMDKGoBmcLsrWcgpCUAAAAASUVORK5CYII=
 // @downloadURL  https://github.com/0000xFFFF/4chan-masonry/raw/refs/heads/master/4chan-masonry.user.js
@@ -710,7 +711,8 @@ function initUI() {
     findMediaLinks(button);
 }
 
-function findMediaLinks(button = null) {
+
+function findMediaLinks4chan(button = null) {
     const mediaLinks = [];
     const files = document.querySelectorAll('div.file');
 
@@ -771,6 +773,85 @@ function findMediaLinks(button = null) {
     return mediaLinks;
 }
 
+function findMediaLinks4plebs(button = null) {
+    const mediaLinks = [];
+    const files = document.querySelectorAll('.post.has_image');
+
+    files.forEach((fileDiv, index) => {
+        const thread_image_box = fileDiv.querySelector('.thread_image_box');
+        const link = fileDiv.querySelector('.thread_image_link');
+
+        if (link && link.href) {
+
+            const fileThumbImage = fileDiv.querySelector('.thread_image_link img');
+            const originalName = fileDiv.querySelector('.post_file_filename');
+
+            const url = link.href;
+            const isImage = /\.(jpg|jpeg|png|gif|webp|bmp|svg)(\?|$)/i.test(url);
+            const isVideo = /\.(mp4|webm|mkv|avi|mov)(\?|$)/i.test(url);
+
+            if (isImage || isVideo) {
+                const postId = url.split('/').pop().split('.')[0];
+
+                // get file info text
+                const fileInfo = fileDiv.querySelector(".post_file_metadata");
+                let width = fileInfo.querySelector(".media_w");
+                let height = fileInfo.querySelector(".media_h");
+
+                const newElement = {
+                    url: url,
+                    originalName: originalName,
+                    postId: postId,
+                    index: index + 1,
+                    isVideo: isVideo,
+                    thumbnail: (fileThumbImage.src),
+                    width: width,
+                    height: height
+                };
+                mediaLinks.push(newElement);
+            }
+        }
+    });
+
+    if (button) {
+        button.title = `Masonry Grid (${mediaLinks.length})`;
+    }
+
+    return mediaLinks;
+}
+
+function findMediaLinksFromA() {
+    const mediaLinks = []
+    const imgElements = document.querySelectorAll('a[href*="jpg"], a[href*="jpeg"], a[href*="png"], a[href*="gif"], a[href*="webp"], a[href*="bmp"]');
+    const videoElements = document.querySelectorAll('a[href*="mp4"], a[href*="webm"], a[href*="mkv"], a[href*="avi"], a[href*="mov"]');
+    const mediaElements = [...imgElements, ...videoElements];
+    mediaElements.forEach((img_or_vid, index) => {
+        const url = img_or_vid.href;
+        console.log(url);
+        const filename = url.split('/').pop().split('?')[0];
+        const isVideo = /\.(mp4|webm|mkv|avi|mov)(\?|$)/i.test(url);
+
+        mediaLinks.push({
+            url: url,
+            originalName: filename,
+            postId: filename,
+            index: index + 1,
+            isVideo: isVideo
+        });
+    });
+    return mediaLinks;
+}
+
+function findMediaLinks(button = null) {
+    if (document.location.href.includes("4chan")) {
+        return findMediaLinks4chan(button);
+    }
+    if (document.location.href.includes("4plebs")) {
+        return findMediaLinks4plebs(button);
+    }
+}
+
+// this will only return thumbnails
 function findMediaLinksFromImgAndVideoElements() {
     const mediaLinks = []
     const imgElements = document.querySelectorAll('img[src*="jpg"], img[src*="jpeg"], img[src*="png"], img[src*="gif"], img[src*="webp"], img[src*="bmp"]');
