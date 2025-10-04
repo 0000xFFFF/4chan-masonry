@@ -231,13 +231,11 @@ var MasonryCss = `
     left: 0;
     width: 100vw;
     height: 100vh;
-    background: rgba(0, 0, 0, 0.92);
     display: none;
     align-items: center;
     justify-content: center;
     z-index: 10001;
     pointer-events: none;
-    backdrop-filter: blur(8px);
 }
 
 .fcm_hover_preview.active {
@@ -248,22 +246,21 @@ var MasonryCss = `
     max-width: 95vw;
     max-height: 95vh;
     object-fit: contain;
-    box-shadow: 0 0 50px rgba(0,0,0,0.8);
+    position: fixed;
+    transform: none;
 }
 
 .fcm_hover_preview video {
     max-width: 95vw;
     max-height: 95vh;
     object-fit: contain;
-    box-shadow: 0 0 50px rgba(0,0,0,0.8);
+    position: fixed;
+    transform: none;
 }
 
 .fcm_hover_preview_info {
-    position: absolute;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(0,0,0,0.9);
+    position: fixed;
+    background-color: rgba(0,0,0,0.8);
     color: white;
     padding: 12px 20px;
     border-radius: 8px;
@@ -271,6 +268,7 @@ var MasonryCss = `
     max-width: 90vw;
     text-align: center;
     word-break: break-all;
+    pointer-events: none;
 }
 
 `;
@@ -699,9 +697,53 @@ function setupHoverPreview(
     isVideo = false
 ) {
     let previewOverlay = null;
-    let lastVolume = 1.0; // Remember last volume setting
+    let lastVolume = 1.0;
 
-    const showPreview = () => {
+    const updatePreviewPosition = (e) => {
+        if (!previewOverlay) return;
+
+        const mediaElement = previewOverlay.querySelector("img, video");
+        const infoElement = previewOverlay.querySelector(
+            ".fcm_hover_preview_info"
+        );
+
+        if (mediaElement) {
+            // Get element dimensions
+            const rect = mediaElement.getBoundingClientRect();
+            const buffer = 20; // Space between cursor and preview
+
+            // Calculate initial position (offset from cursor)
+            let left = e.clientX + buffer;
+            let top = e.clientY + buffer;
+
+            // Adjust if would overflow right side
+            if (left + rect.width > window.innerWidth) {
+                left = e.clientX - rect.width - buffer;
+            }
+
+            // Adjust if would overflow bottom
+            if (top + rect.height > window.innerHeight) {
+                top = e.clientY - rect.height - buffer;
+            }
+
+            // Ensure not off screen left or top
+            left = Math.max(buffer, left);
+            top = Math.max(buffer, top);
+
+            // Apply position
+            mediaElement.style.left = left + "px";
+            mediaElement.style.top = top + "px";
+        }
+
+        if (infoElement) {
+            // Position info at bottom of viewport
+            infoElement.style.left = "50%";
+            infoElement.style.bottom = "20px";
+            infoElement.style.transform = "translateX(-50%)";
+        }
+    };
+
+    const showPreview = (e) => {
         if (!previewOverlay) {
             previewOverlay = document.createElement("div");
             previewOverlay.className = "fcm_hover_preview";
@@ -741,8 +783,6 @@ function setupHoverPreview(
             } else {
                 const previewImg = document.createElement("img");
                 previewImg.alt = mediaData.originalName;
-
-                // Use full resolution if already loaded, otherwise use thumbnail
                 const currentSrc = thumbnailImg.dataset.fullUrl
                     ? thumbnailImg.src
                     : thumbnailImg.src.includes(mediaData.url)
@@ -750,7 +790,6 @@ function setupHoverPreview(
                     : mediaData.url;
                 previewImg.src = currentSrc;
 
-                // Preload full resolution if not loaded yet
                 if (thumbnailImg.dataset.fullUrl) {
                     preloadMedia(thumbnailImg.dataset.fullUrl, "high")
                         .then((fullImg) => {
@@ -777,16 +816,8 @@ function setupHoverPreview(
 
             previewOverlay.appendChild(previewInfo);
             gridOverlay.appendChild(previewOverlay);
-        } else if (isVideo) {
-            const previewVideo = previewOverlay.querySelector("video");
-            if (mainVideo && previewVideo) {
-                previewVideo.currentTime = mainVideo.currentTime;
-                previewVideo.muted = false;
-                previewVideo.volume = lastVolume;
-                mainVideo.muted = true;
-            }
+            updatePreviewPosition(e);
         }
-
         previewOverlay.classList.add("active");
     };
 
@@ -797,9 +828,15 @@ function setupHoverPreview(
         }
     };
 
-    mediaWrapper.addEventListener("mouseenter", () => {
+    mediaWrapper.addEventListener("mouseenter", (e) => {
         if (HOVER_PREVIEW_ENABLED) {
-            showPreview();
+            showPreview(e);
+        }
+    });
+
+    mediaWrapper.addEventListener("mousemove", (e) => {
+        if (HOVER_PREVIEW_ENABLED && previewOverlay) {
+            updatePreviewPosition(e);
         }
     });
 
