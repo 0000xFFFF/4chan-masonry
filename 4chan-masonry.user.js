@@ -22,6 +22,7 @@ const CONCURRENT_LOADS_VIDEO = 1;
 const LOAD_DELAY_IMAGE = 10;
 const LOAD_DELAY_VIDEO = 300;
 const PRELOAD_VIEWPORT_BUFFER = 200; // Load images within 200px of viewport
+let HOVER_PREVIEW_ENABLED = true; // Enable hover preview by default
 
 function GM_addStyle(css) {
     const style = document.createElement("style");
@@ -61,7 +62,7 @@ var MasonryCss = `
     backdrop-filter: blur(5px);
 }
 
-.fcm_slider_container {
+.fcm_topbar_controls, .fcm_slider_container, .fcm_checkbox_container {
     display: flex;
     align-items: center;
     gap: 15px;
@@ -221,6 +222,48 @@ var MasonryCss = `
 
 .fcm_media_wrapper:hover .fcm_tooltip {
     transform: translateY(0);
+}
+
+.fcm_hover_preview {
+    pointer-events: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.92);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 10001;
+    pointer-events: none;
+    backdrop-filter: blur(8px);
+}
+
+.fcm_hover_preview.active {
+    display: flex;
+}
+
+.fcm_hover_preview img {
+    max-width: 95vw;
+    max-height: 95vh;
+    object-fit: contain;
+    box-shadow: 0 0 50px rgba(0,0,0,0.8);
+}
+
+.fcm_hover_preview_info {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.9);
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    max-width: 90vw;
+    text-align: center;
+    word-break: break-all;
 }
 
 `;
@@ -608,6 +651,9 @@ function createOptimizedMediaElement(mediaData) {
         // Use Intersection Observer for lazy loading
         imageObserver.observe(img);
         mediaWrapper.appendChild(img);
+
+        // Add hover preview for images
+        setupHoverPreview(mediaWrapper, mediaData, img);
     }
 
     // Filename tooltip
@@ -622,8 +668,84 @@ function createOptimizedMediaElement(mediaData) {
         }
     });
 
+    mediaWrapper.addEventListener("click", () => {
+        mediaData.fileDiv.scrollIntoView({
+            alignToTop: true,
+            behavior: "instant",
+            block: "start",
+        });
+
+        closeGrid();
+    });
+
     mediaWrapper.appendChild(tooltip);
     return mediaWrapper;
+}
+
+function setupHoverPreview(mediaWrapper, mediaData, thumbnailImg) {
+    let previewOverlay = null;
+
+    const showPreview = () => {
+        if (!previewOverlay) {
+            previewOverlay = document.createElement("div");
+            previewOverlay.className = "fcm_hover_preview";
+
+            const previewImg = document.createElement("img");
+            previewImg.alt = mediaData.originalName;
+
+            const previewInfo = document.createElement("div");
+            previewInfo.className = "fcm_hover_preview_info";
+            previewInfo.textContent = `${mediaData.originalName}${
+                mediaData.width && mediaData.height
+                    ? ` • ${mediaData.width}×${mediaData.height}`
+                    : ""
+            }`;
+
+            previewOverlay.appendChild(previewImg);
+            previewOverlay.appendChild(previewInfo);
+            gridOverlay.appendChild(previewOverlay);
+
+            // Use full resolution if already loaded, otherwise use thumbnail
+            const currentSrc = thumbnailImg.dataset.fullUrl
+                ? thumbnailImg.src
+                : thumbnailImg.src.includes(mediaData.url)
+                ? thumbnailImg.src
+                : mediaData.url;
+            previewImg.src = currentSrc;
+
+            // Preload full resolution if not loaded yet
+            if (thumbnailImg.dataset.fullUrl) {
+                preloadMedia(thumbnailImg.dataset.fullUrl, "high")
+                    .then((fullImg) => {
+                        if (
+                            previewOverlay &&
+                            previewOverlay.classList.contains("active")
+                        ) {
+                            previewImg.src = fullImg.src;
+                        }
+                    })
+                    .catch(() => {});
+            }
+        }
+
+        previewOverlay.classList.add("active");
+    };
+
+    const hidePreview = () => {
+        if (previewOverlay) {
+            previewOverlay.classList.remove("active");
+        }
+    };
+
+    mediaWrapper.addEventListener("mouseenter", () => {
+        if (HOVER_PREVIEW_ENABLED) {
+            showPreview();
+        }
+    });
+
+    mediaWrapper.addEventListener("mouseleave", () => {
+        hidePreview();
+    });
 }
 
 // Add cleanup function for when grid is closed
@@ -732,65 +854,71 @@ function initUI() {
 
 function findMediaLinks4chan(button = null) {
     const mediaLinks = [];
-    const files = document.querySelectorAll("div.file");
 
-    files.forEach((fileDiv, index) => {
-        const fileText = fileDiv.querySelector(".fileText");
-        const fileThumb = fileDiv.querySelector(".fileThumb");
-        const fileThumbImage = fileThumb.querySelector("img");
-        let link = null;
-        if (fileText) {
-            link = fileText.querySelector("a");
-        }
+    const posts = document.querySelectorAll(".postContainer");
 
-        if (link && link.href) {
-            const url = link.href.startsWith("//")
-                ? "https:" + link.href
-                : link.href;
+    posts.forEach((post, index) => {
+        const fileDiv = post.querySelector("div.file");
 
-            const isImage = /\.(jpg|jpeg|png|gif|webp|bmp|svg)(\?|$)/i.test(
-                url
-            );
-            const isVideo = /\.(mp4|webm|mkv|avi|mov)(\?|$)/i.test(url);
+        if (fileDiv) {
+            const fileText = fileDiv.querySelector(".fileText");
+            const fileThumb = fileDiv.querySelector(".fileThumb");
+            const fileThumbImage = fileThumb.querySelector("img");
+            let link = null;
+            if (fileText) {
+                link = fileText.querySelector("a");
+            }
 
-            if (isImage || isVideo) {
-                const postId = url.split("/").pop().split("?")[0];
-                let originalName =
-                    link.title.trim() || link.textContent.trim() || postId;
+            if (link && link.href) {
+                const url = link.href.startsWith("//")
+                    ? "https:" + link.href
+                    : link.href;
 
-                // if 4chan-X is used fix the name fetching
-                const fnfull = link.querySelector(".fnfull");
-                if (fnfull) {
-                    originalName = fnfull.textContent.trim();
+                const isImage = /\.(jpg|jpeg|png|gif|webp|bmp|svg)(\?|$)/i.test(
+                    url
+                );
+                const isVideo = /\.(mp4|webm|mkv|avi|mov)(\?|$)/i.test(url);
+
+                if (isImage || isVideo) {
+                    const postId = url.split("/").pop().split("?")[0];
+                    let originalName =
+                        link.title.trim() || link.textContent.trim() || postId;
+
+                    // if 4chan-X is used fix the name fetching
+                    const fnfull = link.querySelector(".fnfull");
+                    if (fnfull) {
+                        originalName = fnfull.textContent.trim();
+                    }
+
+                    // get file info text
+                    const fileInfo = post.querySelector(".file-info");
+                    let width = null;
+                    let height = null;
+                    if (fileInfo) {
+                        const fileInfoClone = fileInfo.cloneNode(true);
+                        fileInfoClone
+                            .querySelectorAll("a")
+                            .forEach((a) => a.remove());
+                        const info = fileInfoClone.textContent.trim();
+                        const size = info.split(", ")[1].replace(")", "");
+                        const width_and_height = size.split("x");
+                        width = width_and_height[0];
+                        height = width_and_height[1];
+                    }
+
+                    const newElement = {
+                        url: url,
+                        originalName: originalName,
+                        postId: postId,
+                        index: index + 1,
+                        isVideo: isVideo,
+                        thumbnail: fileThumbImage.src,
+                        width: width,
+                        height: height,
+                        fileDiv: post,
+                    };
+                    mediaLinks.push(newElement);
                 }
-
-                // get file info text
-                const fileInfo = fileDiv.querySelector(".file-info");
-                let width = null;
-                let height = null;
-                if (fileInfo) {
-                    const fileInfoClone = fileInfo.cloneNode(true);
-                    fileInfoClone
-                        .querySelectorAll("a")
-                        .forEach((a) => a.remove());
-                    const info = fileInfoClone.textContent.trim();
-                    const size = info.split(", ")[1].replace(")", "");
-                    const width_and_height = size.split("x");
-                    width = width_and_height[0];
-                    height = width_and_height[1];
-                }
-
-                const newElement = {
-                    url: url,
-                    originalName: originalName,
-                    postId: postId,
-                    index: index + 1,
-                    isVideo: isVideo,
-                    thumbnail: fileThumbImage.src,
-                    width: width,
-                    height: height,
-                };
-                mediaLinks.push(newElement);
             }
         }
     });
@@ -924,6 +1052,9 @@ function createTopBar() {
     const topbar = document.createElement("div");
     topbar.id = "fcm_topbar";
 
+    const controls = document.createElement("div");
+    controls.className = "fcm_topbar_controls";
+
     const sliderContainer = document.createElement("div");
     sliderContainer.className = "fcm_slider_container";
 
@@ -974,7 +1105,29 @@ function createTopBar() {
 
     sliderContainer.appendChild(slider);
     sliderContainer.appendChild(valueDisplay);
-    topbar.appendChild(sliderContainer);
+    controls.appendChild(sliderContainer);
+
+    const showPreviewContainer = document.createElement("div");
+    showPreviewContainer.className = "fcm_checkbox_container";
+    const showPreviewCheckbox = document.createElement("input");
+    showPreviewCheckbox.type = "checkbox";
+    showPreviewCheckbox.id = "setting_checkbox_preview";
+    showPreviewCheckbox.checked = HOVER_PREVIEW_ENABLED;
+    const showPreviewLabel = document.createElement("label");
+    showPreviewLabel.htmlFor = "setting_checkbox_preview";
+    showPreviewLabel.textContent = "Hover Preview";
+    showPreviewContainer.appendChild(showPreviewCheckbox);
+    showPreviewContainer.appendChild(showPreviewLabel);
+
+    controls.appendChild(showPreviewContainer);
+
+    topbar.appendChild(controls);
+
+    showPreviewContainer.addEventListener("click", (e) => {
+        e.stopPropagation();
+        showPreviewCheckbox.checked = !showPreviewCheckbox.checked;
+        HOVER_PREVIEW_ENABLED = showPreviewCheckbox.checked;
+    });
 
     // Close button
     const closeButton = document.createElement("button");
