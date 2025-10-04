@@ -699,7 +699,7 @@ function setupHoverPreview(
     isVideo = false
 ) {
     let previewOverlay = null;
-    let mainVideo = null; // Reference to the main video element
+    let lastVolume = 1.0; // Remember last volume setting
 
     const showPreview = () => {
         if (!previewOverlay) {
@@ -707,7 +707,6 @@ function setupHoverPreview(
             previewOverlay.className = "fcm_hover_preview";
 
             if (isVideo) {
-                // Find the main video if it exists
                 mainVideo = mediaWrapper.querySelector("video");
                 const previewVideo = document.createElement("video");
                 previewVideo.className = "fcm_preview_video";
@@ -716,6 +715,18 @@ function setupHoverPreview(
                 previewVideo.playsInline = true;
                 previewVideo.controls = false;
                 previewVideo.autoplay = true;
+                previewVideo.volume = lastVolume;
+
+                // Mouse wheel volume control
+                previewVideo.addEventListener("wheel", (e) => {
+                    e.preventDefault();
+                    const delta = e.deltaY * -0.01;
+                    lastVolume = Math.max(
+                        0,
+                        Math.min(1, previewVideo.volume + delta)
+                    );
+                    previewVideo.volume = lastVolume;
+                });
 
                 // Sync with main video if it exists and is playing
                 if (mainVideo) {
@@ -767,11 +778,11 @@ function setupHoverPreview(
             previewOverlay.appendChild(previewInfo);
             gridOverlay.appendChild(previewOverlay);
         } else if (isVideo) {
-            // If preview exists and it's a video, ensure it's synced
             const previewVideo = previewOverlay.querySelector("video");
-            if (mainVideo && !mainVideo.paused && previewVideo) {
+            if (mainVideo && previewVideo) {
                 previewVideo.currentTime = mainVideo.currentTime;
                 previewVideo.muted = false;
+                previewVideo.volume = lastVolume;
                 mainVideo.muted = true;
             }
         }
@@ -781,19 +792,8 @@ function setupHoverPreview(
 
     const hidePreview = () => {
         if (previewOverlay) {
-            previewOverlay.classList.remove("active");
-
-            // Handle video cleanup
-            if (isVideo) {
-                const previewVideo = previewOverlay.querySelector("video");
-                if (previewVideo) {
-                    previewVideo.muted = true;
-                }
-                // Restore main video sound if it exists
-                if (mainVideo) {
-                    mainVideo.muted = false;
-                }
-            }
+            previewOverlay.remove();
+            previewOverlay = null;
         }
     };
 
