@@ -251,6 +251,13 @@ var MasonryCss = `
     box-shadow: 0 0 50px rgba(0,0,0,0.8);
 }
 
+.fcm_hover_preview video {
+    max-width: 95vw;
+    max-height: 95vh;
+    object-fit: contain;
+    box-shadow: 0 0 50px rgba(0,0,0,0.8);
+}
+
 .fcm_hover_preview_info {
     position: absolute;
     bottom: 20px;
@@ -614,6 +621,9 @@ function createOptimizedVideoElement(
             );
         }
     });
+
+    // Add hover preview for videos
+    setupHoverPreview(mediaWrapper, mediaData, thumbImg, true);
 }
 
 // Replace the image creation part in createMasonryGrid function
@@ -653,7 +663,7 @@ function createOptimizedMediaElement(mediaData) {
         mediaWrapper.appendChild(img);
 
         // Add hover preview for images
-        setupHoverPreview(mediaWrapper, mediaData, img);
+        setupHoverPreview(mediaWrapper, mediaData, img, false);
     }
 
     // Filename tooltip
@@ -682,7 +692,12 @@ function createOptimizedMediaElement(mediaData) {
     return mediaWrapper;
 }
 
-function setupHoverPreview(mediaWrapper, mediaData, thumbnailImg) {
+function setupHoverPreview(
+    mediaWrapper,
+    mediaData,
+    thumbnailImg,
+    isVideo = false
+) {
     let previewOverlay = null;
 
     const showPreview = () => {
@@ -690,8 +705,43 @@ function setupHoverPreview(mediaWrapper, mediaData, thumbnailImg) {
             previewOverlay = document.createElement("div");
             previewOverlay.className = "fcm_hover_preview";
 
-            const previewImg = document.createElement("img");
-            previewImg.alt = mediaData.originalName;
+            if (isVideo) {
+                const previewVideo = document.createElement("video");
+                previewVideo.src = mediaData.url;
+                previewVideo.loop = true;
+                previewVideo.muted = true;
+                previewVideo.playsInline = true;
+                previewVideo.controls = false;
+                previewVideo.autoplay = true;
+                previewOverlay.appendChild(previewVideo);
+            } else {
+                const previewImg = document.createElement("img");
+                previewImg.alt = mediaData.originalName;
+
+                // Use full resolution if already loaded, otherwise use thumbnail
+                const currentSrc = thumbnailImg.dataset.fullUrl
+                    ? thumbnailImg.src
+                    : thumbnailImg.src.includes(mediaData.url)
+                    ? thumbnailImg.src
+                    : mediaData.url;
+                previewImg.src = currentSrc;
+
+                // Preload full resolution if not loaded yet
+                if (thumbnailImg.dataset.fullUrl) {
+                    preloadMedia(thumbnailImg.dataset.fullUrl, "high")
+                        .then((fullImg) => {
+                            if (
+                                previewOverlay &&
+                                previewOverlay.classList.contains("active")
+                            ) {
+                                previewImg.src = fullImg.src;
+                            }
+                        })
+                        .catch(() => {});
+                }
+
+                previewOverlay.appendChild(previewImg);
+            }
 
             const previewInfo = document.createElement("div");
             previewInfo.className = "fcm_hover_preview_info";
@@ -701,31 +751,8 @@ function setupHoverPreview(mediaWrapper, mediaData, thumbnailImg) {
                     : ""
             }`;
 
-            previewOverlay.appendChild(previewImg);
             previewOverlay.appendChild(previewInfo);
             gridOverlay.appendChild(previewOverlay);
-
-            // Use full resolution if already loaded, otherwise use thumbnail
-            const currentSrc = thumbnailImg.dataset.fullUrl
-                ? thumbnailImg.src
-                : thumbnailImg.src.includes(mediaData.url)
-                ? thumbnailImg.src
-                : mediaData.url;
-            previewImg.src = currentSrc;
-
-            // Preload full resolution if not loaded yet
-            if (thumbnailImg.dataset.fullUrl) {
-                preloadMedia(thumbnailImg.dataset.fullUrl, "high")
-                    .then((fullImg) => {
-                        if (
-                            previewOverlay &&
-                            previewOverlay.classList.contains("active")
-                        ) {
-                            previewImg.src = fullImg.src;
-                        }
-                    })
-                    .catch(() => {});
-            }
         }
 
         previewOverlay.classList.add("active");
@@ -734,6 +761,12 @@ function setupHoverPreview(mediaWrapper, mediaData, thumbnailImg) {
     const hidePreview = () => {
         if (previewOverlay) {
             previewOverlay.classList.remove("active");
+
+            // Pause video if it exists
+            const video = previewOverlay.querySelector("video");
+            if (video) {
+                video.pause();
+            }
         }
     };
 
