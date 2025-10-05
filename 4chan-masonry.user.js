@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         4chan-masonry
 // @namespace    0000xFFFF
-// @version      1.5
+// @version      1.5.1
 // @description  View all media (images+videos) from a 4chan thread in a masonry grid layout.
 // @author       0000xFFFF
 // @license      MIT
@@ -744,6 +744,10 @@ function setupHoverPreview(
     };
 
     const showPreview = (e) => {
+        document
+            .querySelectorAll(".fcm_hover_preview")
+            .forEach((el) => el.remove());
+
         if (!previewOverlay) {
             previewOverlay = document.createElement("div");
             previewOverlay.className = "fcm_hover_preview";
