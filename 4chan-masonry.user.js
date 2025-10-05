@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         4chan-masonry
 // @namespace    0000xFFFF
-// @version      1.4.1
+// @version      1.5
 // @description  View all media (images+videos) from a 4chan thread in a masonry grid layout.
 // @author       0000xFFFF
 // @license      MIT
