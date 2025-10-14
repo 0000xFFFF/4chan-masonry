@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         4chan-masonry
 // @namespace    0000xFFFF
-// @version      1.5.3
+// @version      1.5.4
 // @description  View all media (images+videos) from a 4chan thread in a masonry grid layout.
 // @author       0000xFFFF
 // @license      MIT
@@ -14,15 +14,46 @@
 // @updateURL    https://github.com/0000xFFFF/4chan-masonry/raw/refs/heads/master/4chan-masonry.user.js
 // ==/UserScript==
 
-const GRID_ROWS_MIN = 1;
-const GRID_ROWS_MAX = 15;
-const GRID_ROWS_DEFAULT = 4;
-const CONCURRENT_LOADS_IMAGE = 3;
-const CONCURRENT_LOADS_VIDEO = 1;
-const LOAD_DELAY_IMAGE = 10;
-const LOAD_DELAY_VIDEO = 300;
-const PRELOAD_VIEWPORT_BUFFER = 200; // Load images within 200px of viewport
-let HOVER_PREVIEW_ENABLED = true; // Enable hover preview by default
+function loadSetting(name, def) {
+    const raw = localStorage.getItem(name);
+    if (raw === null) {
+        localStorage.setItem(name, JSON.stringify(def));
+        return def;
+    }
+    return JSON.parse(raw);
+}
+function saveSetting(name, value) {
+    localStorage.setItem(name, JSON.stringify(value));
+}
+
+// Base config with initial values
+const baseConfig = {
+    GRID_ROWS_MIN: loadSetting("FCM_GRID_ROWS_MIN", 1),
+    GRID_ROWS_MAX: loadSetting("FCM_GRID_ROWS_MAX", 15),
+    GRID_ROWS_DEFAULT: loadSetting("FCM_GRID_ROWS_DEFAULT", 4),
+    CONCURRENT_LOADS_IMAGE: loadSetting("FCM_CONCURRENT_LOADS_IMAGE", 3),
+    CONCURRENT_LOADS_VIDEO: loadSetting("FCM_CONCURRENT_LOADS_VIDEO", 1),
+    LOAD_DELAY_IMAGE: loadSetting("FCM_LOAD_DELAY_IMAGE", 10),
+    LOAD_DELAY_VIDEO: loadSetting("FCM_LOAD_DELAY_VIDEO", 300),
+    PRELOAD_VIEWPORT_BUFFER: loadSetting("FCM_PRELOAD_VIEWPORT_BUFFER", 200),
+    HOVER_PREVIEW_ENABLED: loadSetting("FCM_HOVER_PREVIEW_ENABLED", true)
+};
+
+// Proxy that saves automatically on change
+const CONFIG = new Proxy(baseConfig, {
+    set(target, prop, value) {
+        if (Object.prototype.hasOwnProperty.call(target, prop)) {
+            target[prop] = value;
+            const key = "FCM_" + prop; // store with prefix for consistency
+            saveSetting(key, value);
+            console.log(`Saved setting: ${key} =`, value);
+            return true;
+        } else {
+            console.warn(`Attempt to set unknown config key: ${prop}`);
+            return false;
+        }
+    }
+});
 
 function GM_addStyle(css) {
     const style = document.createElement("style");
@@ -282,7 +313,6 @@ const userscript_icon_2 =
 const userscript_icon_3 =
     "data:image/ico;base64,AAABAAEACggAAAEAIABkAAAAFgAAAIlQTkcNChoKAAAADUlIRFIAAAAKAAAACAgGAAAAwPputgAAACtJREFUeJxjYEAF/9EwVvA/7YwxCsamGF0Sq2IMRbgUE62QaKtJ8gzB4AEA82hZQXIdFlEAAAAASUVORK5CYII=";
 
-let gridRows = GRID_ROWS_DEFAULT;
 let isGridOpen = false;
 let gridOverlay = null;
 let loadQueue = [];
@@ -296,7 +326,7 @@ function delay(ms) {
 }
 
 // Check if element is near viewport
-function isNearViewport(element, buffer = PRELOAD_VIEWPORT_BUFFER) {
+function isNearViewport(element, buffer = CONFIG.PRELOAD_VIEWPORT_BUFFER) {
     const rect = element.getBoundingClientRect();
     const windowHeight = window.innerHeight;
     const windowWidth = window.innerWidth;
@@ -324,8 +354,8 @@ async function preloadMedia(url, priority = "low", type = "image") {
 // Process the load queue with rate limiting
 async function processLoadQueue() {
     if (
-        activeLoadsImage >= CONCURRENT_LOADS_IMAGE ||
-        activeLoadsVideo >= CONCURRENT_LOADS_VIDEO ||
+        activeLoadsImage >= CONFIG.CONCURRENT_LOADS_IMAGE ||
+        activeLoadsVideo >= CONFIG.CONCURRENT_LOADS_VIDEO ||
         loadQueue.length === 0
     ) {
         return;
@@ -342,10 +372,10 @@ async function processLoadQueue() {
     let delayMs = 0;
     if (item.type === "image") {
         activeLoadsImage++;
-        delayMs = LOAD_DELAY_IMAGE;
+        delayMs = CONFIG.LOAD_DELAY_IMAGE;
     } else {
         activeLoadsVideo++;
-        delayMs = LOAD_DELAY_VIDEO;
+        delayMs = CONFIG.LOAD_DELAY_VIDEO;
     }
 
     try {
@@ -767,7 +797,7 @@ function setupHoverPreview(
                 mediaWrapper.addEventListener(
                     "wheel",
                     (e) => {
-                        if (HOVER_PREVIEW_ENABLED) {
+                        if (CONFIG.HOVER_PREVIEW_ENABLED) {
                             e.preventDefault();
                             const delta = -e.deltaY * 0.0005;
                             const newVolume = Math.min(1, Math.max(0, previewVideo.volume + delta));
@@ -836,13 +866,13 @@ function setupHoverPreview(
     };
 
     mediaWrapper.addEventListener("mouseenter", (e) => {
-        if (HOVER_PREVIEW_ENABLED) {
+        if (CONFIG.HOVER_PREVIEW_ENABLED) {
             showPreview(e);
         }
     });
 
     mediaWrapper.addEventListener("mousemove", (e) => {
-        if (HOVER_PREVIEW_ENABLED && previewOverlay) {
+        if (CONFIG.HOVER_PREVIEW_ENABLED && previewOverlay) {
             updatePreviewPosition(e);
         }
     });
@@ -1148,7 +1178,7 @@ function findMediaLinksFromImgAndVideoElements() {
 function updateMasonryGrid() {
     const gridContainer = document.getElementById("fcm_masonry");
     if (gridContainer) {
-        gridContainer.style.columnCount = gridRows;
+        gridContainer.style.columnCount = CONFIG.GRID_ROWS_DEFAULT;
     }
 }
 
@@ -1165,18 +1195,18 @@ function createTopBar() {
     const slider = document.createElement("input");
     slider.type = "range";
     slider.id = "setting_slider_cols";
-    slider.min = GRID_ROWS_MIN;
-    slider.max = GRID_ROWS_MAX;
+    slider.min = CONFIG.GRID_ROWS_MIN;
+    slider.max = CONFIG.GRID_ROWS_MAX;
     slider.step = "1";
-    slider.value = gridRows;
+    slider.value = CONFIG.GRID_ROWS_DEFAULT;
 
     const valueDisplay = document.createElement("span");
-    valueDisplay.textContent = gridRows;
+    valueDisplay.textContent = CONFIG.GRID_ROWS_DEFAULT;
     valueDisplay.className = "fcm_value_display";
 
     slider.addEventListener("input", (e) => {
-        gridRows = parseInt(e.target.value);
-        valueDisplay.textContent = gridRows;
+        CONFIG.GRID_ROWS_DEFAULT = parseInt(e.target.value);
+        valueDisplay.textContent = CONFIG.GRID_ROWS_DEFAULT;
         updateMasonryGrid();
     });
 
@@ -1216,7 +1246,7 @@ function createTopBar() {
     const showPreviewCheckbox = document.createElement("input");
     showPreviewCheckbox.type = "checkbox";
     showPreviewCheckbox.id = "setting_checkbox_preview";
-    showPreviewCheckbox.checked = HOVER_PREVIEW_ENABLED;
+    showPreviewCheckbox.checked = CONFIG.HOVER_PREVIEW_ENABLED;
     const showPreviewLabel = document.createElement("label");
     showPreviewLabel.htmlFor = "setting_checkbox_preview";
     showPreviewLabel.textContent = "Hover Preview";
@@ -1230,7 +1260,7 @@ function createTopBar() {
     showPreviewContainer.addEventListener("click", (e) => {
         e.stopPropagation();
         showPreviewCheckbox.checked = !showPreviewCheckbox.checked;
-        HOVER_PREVIEW_ENABLED = showPreviewCheckbox.checked;
+        CONFIG.HOVER_PREVIEW_ENABLED = showPreviewCheckbox.checked;
     });
 
     // Close button
@@ -1281,7 +1311,7 @@ function createMasonryGrid(mediaLinks) {
     // Grid container
     const gridContainer = document.createElement("div");
     gridContainer.id = "fcm_masonry";
-    gridContainer.style.columnCount = gridRows;
+    gridContainer.style.columnCount = CONFIG.GRID_ROWS_DEFAULT;
 
     // Create image elements
     mediaLinks.forEach((mediaData, index) => {
