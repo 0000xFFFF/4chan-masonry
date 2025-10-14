@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         4chan-masonry
 // @namespace    0000xFFFF
-// @version      1.5.1
+// @version      1.5.2
 // @description  View all media (images+videos) from a 4chan thread in a masonry grid layout.
 // @author       0000xFFFF
 // @license      MIT
@@ -764,15 +764,17 @@ function setupHoverPreview(
                 previewVideo.volume = lastVolume;
 
                 // Mouse wheel volume control
-                previewVideo.addEventListener("wheel", (e) => {
-                    e.preventDefault();
-                    const delta = e.deltaY * -0.01;
-                    lastVolume = Math.max(
-                        0,
-                        Math.min(1, previewVideo.volume + delta)
-                    );
-                    previewVideo.volume = lastVolume;
-                });
+                mediaWrapper.addEventListener(
+                    "wheel",
+                    (e) => {
+                        e.preventDefault();
+                        const delta = -e.deltaY * 0.0005;
+                        const newVolume = Math.min(1, Math.max(0, previewVideo.volume + delta));
+                        previewVideo.volume = newVolume;
+                        lastVolume = newVolume;
+                    },
+                    { passive: false } // Important to make preventDefault() work
+                );
 
                 // Sync with main video if it exists and is playing
                 if (mainVideo) {
@@ -1346,3 +1348,4 @@ async function init() {
 }
 
 init();
+
