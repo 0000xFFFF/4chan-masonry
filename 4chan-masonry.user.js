@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         4chan-masonry
 // @namespace    0000xFFFF
-// @version      1.5.4
+// @version      1.5.5
 // @description  View all media (images+videos) from a 4chan thread in a masonry grid layout.
 // @author       0000xFFFF
 // @license      MIT
@@ -84,7 +84,7 @@ var MasonryCss = `
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 15px 20px;
+    padding: 3px;
     background-color: rgba(0, 0, 0, 0.8);
     color: #fff;
     z-index: 999;
@@ -100,7 +100,7 @@ var MasonryCss = `
 }
 
 .fcm_close {
-    padding: 8px 12px;
+    padding: 2px 2px;
     background: #d32f2f;
     color: white;
     border: none;
@@ -109,7 +109,7 @@ var MasonryCss = `
     font-size: 14px;
     font-weight: bold;
     transition: all 0.2s ease;
-    min-width: 40px;
+    min-width: 20px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -123,7 +123,7 @@ var MasonryCss = `
 #fcm_masonry {
     display: block;
     gap: 10px;
-    margin-top: 90px;
+    margin-top: 50px;
     column-gap: 5px;
 }
 
@@ -535,7 +535,6 @@ function createOptimizedVideoElement(
     let video = null;
     let videoLoaded = false;
     let hoverTimeout = null;
-    let isHovering = false;
 
     const createVideo = () => {
         if (!video) {
@@ -568,6 +567,7 @@ function createOptimizedVideoElement(
             playBtn.style.display = "none";
             video.style.display = "block";
             video.play().catch(() => { });
+            video.controls = true;
         }
     };
 
@@ -580,75 +580,37 @@ function createOptimizedVideoElement(
         }
     };
 
-    // Hover enter - start loading after delay
-    mediaWrapper.addEventListener("mouseenter", () => {
-        isHovering = true;
-        clearTimeout(hoverTimeout);
+    // on right click load video
+    mediaWrapper.addEventListener("mousedown", (e) => {
+        if (e.button === 2) {
+            e.preventDefault();
 
-        hoverTimeout = setTimeout(() => {
-            if (isHovering) {
-                // Double-check still hovering
-                const vid = createVideo();
+            // Double-check still hovering
+            const vid = createVideo();
 
-                if (videoLoaded) {
-                    // Video already loaded, show immediately
-                    showVideo();
-                } else if (!vid.src) {
-                    // Queue the video load instead of hitting server immediately
-                    preloadMedia(mediaData.url, "high", "video")
-                        .then((videoEl) => {
-                            vid.src = mediaData.url;
-                        })
-                        .catch(() => {
-                            console.warn(
-                                "Failed to queue video load:",
-                                mediaData.url
-                            );
-                        });
-                }
-                // If video is loading, showVideo() will be called from 'canplay' event
+            if (videoLoaded) {
+                // Video already loaded, show immediately
+                showVideo();
+            } else if (!vid.src) {
+                // Queue the video load instead of hitting server immediately
+                preloadMedia(mediaData.url, "high", "video")
+                    .then(() => {
+                        vid.src = mediaData.url;
+                    })
+                    .catch(() => {
+                        console.warn(
+                            "Failed to queue video load:",
+                            mediaData.url
+                        );
+                    });
             }
-        }, 100); // Reduced delay for better responsiveness
-    });
-
-    // Hover leave - hide video and cancel loading if needed
-    mediaWrapper.addEventListener("mouseleave", () => {
-        isHovering = false;
-        clearTimeout(hoverTimeout);
-        //hideVideo();
-    });
-
-    // Click handler - permanent video with controls
-    mediaWrapper.addEventListener("click", (e) => {
-        if (!video || video.controls) return; // Already clicked or no video
-
-        e.preventDefault();
-        const vid = createVideo();
-
-        // Set up for permanent display
-        vid.muted = false;
-        vid.controls = true;
-        vid.style.display = "block";
-        thumbImg.style.display = "none";
-        playBtn.style.display = "none";
-
-        if (!vid.src) {
-            vid.src = mediaData.url;
-        }
-
-        // Play when ready
-        if (videoLoaded) {
-            vid.play().catch(() => { });
-        } else {
-            vid.addEventListener(
-                "canplay",
-                () => {
-                    vid.play().catch(() => { });
-                },
-                { once: true }
-            );
         }
     });
+
+    mediaWrapper.addEventListener('contextmenu', function(event) {
+        event.preventDefault();
+    });
+
 
     // Add hover preview for videos
     setupHoverPreview(mediaWrapper, mediaData, thumbImg, true);
@@ -1279,18 +1241,16 @@ function createMasonryGrid(mediaLinks) {
 
     const topbar = createTopBar();
 
-    let lastScroll = 0;
-    overlay.addEventListener("scroll", () => {
-        const currentScroll = overlay.scrollTop;
-
-        if (currentScroll > lastScroll) {
-            topbar.style.transform = "translateY(-100%)";
-        } else {
-            topbar.style.transform = "translateY(0)";
-        }
-
-        lastScroll = currentScroll;
-    });
+    // let lastScroll = 0;
+    // overlay.addEventListener("scroll", () => {
+    //     const currentScroll = overlay.scrollTop;
+    //     if (currentScroll > lastScroll) {
+    //         topbar.style.transform = "translateY(-100%)";
+    //     } else {
+    //         topbar.style.transform = "translateY(0)";
+    //     }
+    //     lastScroll = currentScroll;
+    // });
 
     overlay.appendChild(topbar);
 
@@ -1379,4 +1339,5 @@ async function init() {
 }
 
 init();
+
 
