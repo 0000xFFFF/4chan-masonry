@@ -394,7 +394,7 @@ function throttle(fn, delay) {
     let lastCall = 0;
     let timeout;
 
-    return function (...args) {
+    return function(...args) {
         const now = Date.now();
 
         if (now - lastCall < delay) {
@@ -537,7 +537,7 @@ function createOptimizedVideoElement(
             thumbImg.style.display = "none";
             playBtn.style.display = "none";
             video.style.display = "block";
-            video.play().catch(() => {});
+            video.play().catch(() => { });
         }
     };
 
@@ -608,12 +608,12 @@ function createOptimizedVideoElement(
 
         // Play when ready
         if (videoLoaded) {
-            vid.play().catch(() => {});
+            vid.play().catch(() => { });
         } else {
             vid.addEventListener(
                 "canplay",
                 () => {
-                    vid.play().catch(() => {});
+                    vid.play().catch(() => { });
                 },
                 { once: true }
             );
@@ -794,8 +794,8 @@ function setupHoverPreview(
                 const currentSrc = thumbnailImg.dataset.fullUrl
                     ? thumbnailImg.src
                     : thumbnailImg.src.includes(mediaData.url)
-                    ? thumbnailImg.src
-                    : mediaData.url;
+                        ? thumbnailImg.src
+                        : mediaData.url;
                 previewImg.src = currentSrc;
 
                 if (thumbnailImg.dataset.fullUrl) {
@@ -808,7 +808,7 @@ function setupHoverPreview(
                                 previewImg.src = fullImg.src;
                             }
                         })
-                        .catch(() => {});
+                        .catch(() => { });
                 }
 
                 previewOverlay.appendChild(previewImg);
@@ -816,11 +816,10 @@ function setupHoverPreview(
 
             const previewInfo = document.createElement("div");
             previewInfo.className = "fcm_hover_preview_info";
-            previewInfo.textContent = `${mediaData.originalName}${
-                mediaData.width && mediaData.height
+            previewInfo.textContent = `${mediaData.originalName}${mediaData.width && mediaData.height
                     ? ` • ${mediaData.width}×${mediaData.height}`
                     : ""
-            }`;
+                }`;
 
             previewOverlay.appendChild(previewInfo);
             gridOverlay.appendChild(previewOverlay);
@@ -876,7 +875,7 @@ function initUI() {
     const button = document.createElement("span");
     button.title = "Masonry Grid";
 
-    button.addEventListener("click", function (e) {
+    button.addEventListener("click", function(e) {
         e.preventDefault();
         openGrid();
     });
