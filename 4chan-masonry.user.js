@@ -817,8 +817,8 @@ function setupHoverPreview(
             const previewInfo = document.createElement("div");
             previewInfo.className = "fcm_hover_preview_info";
             previewInfo.textContent = `${mediaData.originalName}${mediaData.width && mediaData.height
-                    ? ` • ${mediaData.width}×${mediaData.height}`
-                    : ""
+                ? ` • ${mediaData.width}×${mediaData.height}`
+                : ""
                 }`;
 
             previewOverlay.appendChild(previewInfo);
