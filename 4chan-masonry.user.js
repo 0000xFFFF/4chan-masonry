@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         4chan-masonry
 // @namespace    0000xFFFF
-// @version      1.5.7
+// @version      1.5.8
 // @description  View all media (images+videos) from a 4chan thread in a masonry grid layout.
 // @author       0000xFFFF
 // @license      MIT
@@ -740,12 +740,12 @@ function setupHoverPreview(
             .querySelectorAll(".fcm_hover_preview")
             .forEach((el) => el.remove());
 
-        if (!previewOverlay) {
+        if (!previewOverlay && CONFIG.HOVER_PREVIEW_ENABLED) {
             previewOverlay = document.createElement("div");
             previewOverlay.className = "fcm_hover_preview";
 
             if (isVideo) {
-                mainVideo = mediaWrapper.querySelector("video");
+                const mainVideo = mediaWrapper.querySelector("video");
                 const previewVideo = document.createElement("video");
                 previewVideo.className = "fcm_preview_video";
                 previewVideo.src = mediaData.url;
@@ -829,22 +829,9 @@ function setupHoverPreview(
             previewOverlay = null;
         }
     };
-
-    mediaWrapper.addEventListener("mouseenter", (e) => {
-        if (CONFIG.HOVER_PREVIEW_ENABLED) {
-            showPreview(e);
-        }
-    });
-
-    mediaWrapper.addEventListener("mousemove", (e) => {
-        if (CONFIG.HOVER_PREVIEW_ENABLED && previewOverlay) {
-            updatePreviewPosition(e);
-        }
-    });
-
-    mediaWrapper.addEventListener("mouseleave", () => {
-        hidePreview();
-    });
+    mediaWrapper.addEventListener("mouseenter", showPreview);
+    mediaWrapper.addEventListener("mousemove", updatePreviewPosition);
+    mediaWrapper.addEventListener("mouseleave", hidePreview);
 }
 
 // Add cleanup function for when grid is closed
