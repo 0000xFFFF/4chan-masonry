@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         4chan-masonry
 // @namespace    0000xFFFF
-// @version      1.5.5
+// @version      1.5.6
 // @description  View all media (images+videos) from a 4chan thread in a masonry grid layout.
 // @author       0000xFFFF
 // @license      MIT
@@ -31,7 +31,7 @@ const baseConfig = {
     GRID_ROWS_MIN: loadSetting("FCM_GRID_ROWS_MIN", 1),
     GRID_ROWS_MAX: loadSetting("FCM_GRID_ROWS_MAX", 15),
     GRID_ROWS_DEFAULT: loadSetting("FCM_GRID_ROWS_DEFAULT", 4),
-    CONCURRENT_LOADS_IMAGE: loadSetting("FCM_CONCURRENT_LOADS_IMAGE", 3),
+    CONCURRENT_LOADS_IMAGE: loadSetting("FCM_CONCURRENT_LOADS_IMAGE", 1),
     CONCURRENT_LOADS_VIDEO: loadSetting("FCM_CONCURRENT_LOADS_VIDEO", 1),
     LOAD_DELAY_IMAGE: loadSetting("FCM_LOAD_DELAY_IMAGE", 10),
     LOAD_DELAY_VIDEO: loadSetting("FCM_LOAD_DELAY_VIDEO", 300),
@@ -691,8 +691,12 @@ function setupHoverPreview(
     let previewOverlay = null;
     let lastVolume = 1.0;
 
+    let lastEvent;
+
     const updatePreviewPosition = (e) => {
         if (!previewOverlay) return;
+
+        lastEvent = e;
 
         const mediaElement = previewOverlay.querySelector("img, video");
         const infoElement = previewOverlay.querySelector(
@@ -798,6 +802,7 @@ function setupHoverPreview(
                                 previewOverlay.classList.contains("active")
                             ) {
                                 previewImg.src = fullImg.src;
+                                updatePreviewPosition(lastEvent);
                             }
                         })
                         .catch(() => { });
