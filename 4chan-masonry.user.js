@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         4chan-masonry
 // @namespace    0000xFFFF
-// @version      1.5.9
+// @version      1.5.10
 // @description  View all media (images+videos) from a 4chan thread in a masonry grid layout.
 // @author       0000xFFFF
 // @license      MIT
@@ -534,7 +534,6 @@ function createOptimizedVideoElement(
 ) {
     let video = null;
     let videoLoaded = false;
-    let hoverTimeout = null;
 
     const createVideo = () => {
         if (!video) {
@@ -571,14 +570,14 @@ function createOptimizedVideoElement(
         }
     };
 
-    const hideVideo = () => {
-        if (video && !video.controls) {
-            video.pause();
-            video.style.display = "none";
-            thumbImg.style.display = "block";
-            playBtn.style.display = "flex";
-        }
-    };
+    //const hideVideo = () => {
+    //    if (video && !video.controls) {
+    //        video.pause();
+    //        video.style.display = "none";
+    //        thumbImg.style.display = "block";
+    //        playBtn.style.display = "flex";
+    //    }
+    //};
 
     // on right click load video
     mediaWrapper.addEventListener("mousedown", (e) => {
@@ -755,7 +754,7 @@ function setupHoverPreview(
                 previewVideo.autoplay = true;
                 previewVideo.volume = lastVolume;
 
-                previewVideo.addEventListener("loadeddata", (event) => { updatePreviewPosition(e); });
+                previewVideo.addEventListener("loadeddata", () => { updatePreviewPosition(e); });
 
                 // Mouse wheel volume control
                 mediaWrapper.addEventListener(
@@ -1021,7 +1020,6 @@ function findMediaLinks4plebs(button = null) {
     const files = document.querySelectorAll(".post.has_image");
 
     files.forEach((fileDiv, index) => {
-        const thread_image_box = fileDiv.querySelector(".thread_image_box");
         const link = fileDiv.querySelector(".thread_image_link");
 
         if (link && link.href) {
@@ -1265,7 +1263,7 @@ function createMasonryGrid(mediaLinks) {
     gridContainer.style.columnCount = CONFIG.GRID_ROWS_DEFAULT;
 
     // Create image elements
-    mediaLinks.forEach((mediaData, index) => {
+    mediaLinks.forEach((mediaData) => {
         const mediaWrapper = createOptimizedMediaElement(mediaData);
         gridContainer.appendChild(mediaWrapper);
     });
