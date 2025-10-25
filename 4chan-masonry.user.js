@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         4chan-masonry
 // @namespace    0000xFFFF
-// @version      1.5.8
+// @version      1.5.9
 // @description  View all media (images+videos) from a 4chan thread in a masonry grid layout.
 // @author       0000xFFFF
 // @license      MIT
@@ -1046,13 +1046,14 @@ function findMediaLinks4plebs(button = null) {
 
                 const newElement = {
                     url: url,
-                    originalName: originalName,
+                    originalName: originalName.innerHTML,
                     postId: postId,
                     index: index + 1,
                     isVideo: isVideo,
                     thumbnail: fileThumbImage.src,
-                    width: width,
-                    height: height,
+                    width: width.innerHTML,
+                    height: height.innerHTML,
+                    fileDiv: fileDiv,
                 };
                 mediaLinks.push(newElement);
             }
